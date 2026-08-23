@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Build a Baller - Soccer Career Simulator</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --accent-gold: #f59e0b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+            --danger: #ef4444;
+            --legendary: #8b5cf6;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            color: var(--accent-gold);
+            font-size: 2.5rem;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+        header p {
+            color: var(--text-muted);
+            margin: 5px 0 0;
+        }
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        h2 { margin-top: 0; color: var(--accent-gold); }
+        .btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: #000;
+            font-weight: bold;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: transform 0.1s, opacity 0.2s;
+            width: 100%;
+            margin-top: 15px;
+        }
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn:active { transform: translateY(1px); }
+        .grid-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .option-card {
+            background: var(--bg-color);
+            border: 2px solid var(--border-color);
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+        .option-card:hover, .option-card.selected {
+            border-color: var(--accent-gold);
+            color: var(--accent-gold);
+        }
+        .attribute-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .attribute-item {
+            background: var(--bg-color);
+            padding: 10px 15px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid var(--border-color);
+        }
+        .attribute-item.locked { border-left-color: var(--success); }
+        .grade-badge {
+            background: var(--border-color);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .grade-S { background: #b45309; color: #fff; }
+        .grade-A { background: #047857; color: #fff; }
+        .grade-B { background: #1d4ed8; color: #fff; }
+        .grade-C { background: #6b7280; color: #fff; }
+        .grade-D, .grade-F { background: #b91c1c; color: #fff; }
+        .roster-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .player-card-option {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .player-card-option:hover { border-color: var(--accent-gold); background: #111827; }
+        .team-banner {
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+            display: inline-block;
+        }
+        .classic-badge { background: var(--legendary); color: #fff; }
+        .current-badge { background: #3b82f6; color: #fff; }
+        .hidden { display: none !important; }
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .stats-table th, .stats-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .stats-table th { color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>BUILD A BALLER</h1>
+        <p>Draft attributes from iconic modern & all-time legendary squads, build your legend, and conquer Europe.</p>
+    </header>
+
+    <!-- STEP 1: CHOOSE POSITION -->
+    <div id="step-position" class="card">
+        <h2>1. Choose Your Position</h2>
+        <p>Select where you want to anchor your legacy on the pitch:</p>
+        <div class="grid-options">
+            <div class="option-card" onclick="selectPosition('Fullback')">Fullback</div>
+            <div class="option-card" onclick="selectPosition('Centerback')">Centerback</div>
+            <div class="option-card" onclick="selectPosition('Midfielder')">Midfielder</div>
+            <div class="option-card" onclick="selectPosition('Winger')">Winger</div>
+            <div class="option-card" onclick="selectPosition('Striker')">Striker</div>
+        </div>
+        <button class="btn hidden" id="start-draft-btn" onclick="startDraft()">Proceed to Draft</button>
+    </div>
+
+    <!-- STEP 2: DRAFT ATTRIBUTES -->
+    <div id="step-draft" class="card hidden">
+        <h2>2. Build Your Player (<span id="draft-round">1</span>/17 Attributes Locked)</h2>
+        <p>Spin a random team-season, pick a player, and lock down one of their ratings for your build!</p>
+        
+        <div style="background: var(--bg-color); padding: 15px; border-radius: 8px; text-align: center; margin-bottom: 15px;">
+            <div id="team-type-tag"></div>
+            <h3 id="current-spun-team" style="margin:5px 0 10px 0; color:var(--accent-gold);">Click Spin to Get a Team!</h3>
+            <button class="btn" id="spin-btn" onclick="spinTeam()" style="margin-top:0;">Spin Team & Roster</button>
+        </div>
+
+        <div id="roster-container" class="roster-grid hidden"></div>
+
+        <h3 style="margin-top:25px;">Your Build Progress</h3>
+        <div class="attribute-list" id="attribute-progress-list"></div>
+    </div>
+
+    <!-- STEP 3: REVEAL & ARCHETYPE -->
+    <div id="step-reveal" class="card hidden">
+        <h2>3. Player Reveal & Archetype</h2>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <h3 id="reveal-position" style="color: var(--text-muted); margin:0;"></h3>
+            <h1 id="reveal-archetype" style="color: var(--accent-gold); font-size: 2rem; margin: 5px 0;"></h1>
+            <p>Overall Grade: <span id="reveal-grade" class="grade-badge" style="font-size: 1.5rem; padding: 5px 15px;"></span></p>
+        </div>
+        <div class="attribute-list" id="final-attribute-list"></div>
+        <button class="btn" onclick="startCareerSelection()">Choose Career Team & Sim Season</button>
+    </div>
+
+    <!-- STEP 4: CAREER TEAM SELECTION -->
+    <div id="step-career-team" class="card hidden">
+        <h2>4. Select Your Club</h2>
+        <p>Choose which club from your available pool you want to lead to glory:</p>
+        <select id="career-team-select" style="width: 100%; padding: 12px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; margin-top: 10px;"></select>
+        <button class="btn" onclick="simulateSeason()">Simulate Season & Trophies</button>
+    </div>
+
+    <!-- STEP 5: SEASON SIMULATION & STATS -->
+    <div id="step-sim" class="card hidden">
+        <h2>5. Season Results & Honors</h2>
+        <div id="sim-results-content"></div>
+        <button class="btn" onclick="location.reload()">Start New Career</button>
+    </div>
+</div>
+
+<script>
+    const attributesList = [
+        "Pace", "Finishing", "Shot Power", "Long Shots", "Volleys", 
+        "Passing", "Vision", "Dribbling", "Ball Control", "Composure", 
+        "Defending", "Heading", "Athleticism", "Soccer IQ", "Strength", "Stamina"
+    ];
+
+    // Comprehensive Database containing requested current squads + 10 all-time iconic team-seasons
+    const teamsDatabase = [
+        // --- ALL-TIME ICONIC TEAMS (10) ---
+        { team: "2014-15 Barcelona", type: "classic", league: "La Liga", players: [
+            { name: "Lionel Messi", ratings: { Pace: 95, Finishing: 97, "Shot Power": 89, "Long Shots": 90, Volleys: 88, Passing: 86, Vision: 95, Dribbling: 96, "Ball Control": 96, Composure: 95, Defending: 38, Heading: 60, Athleticism: 88, "Soccer IQ": 98, Strength: 65, Stamina: 85 } },
+            { name: "Neymar Jr", ratings: { Pace: 94, Finishing: 89, "Shot Power": 82, "Long Shots": 84, Volleys: 85, Passing: 80, Vision: 88, Dribbling: 95, "Ball Control": 94, Composure: 88, Defending: 35, Heading: 62, Athleticism: 89, "Soccer IQ": 90, Strength: 60, Stamina: 84 } },
+            { name: "Luis Suárez", ratings: { Pace: 88, Finishing: 94, "Shot Power": 90, "Long Shots": 85, Volleys: 92, Passing: 82, Vision: 86, Dribbling: 88, "Ball Control": 90, Composure: 92, Defending: 45, Heading: 78, Athleticism: 87, "Soccer IQ": 94, Strength: 85, Stamina: 92 } },
+            { name: "Andrés Iniesta", ratings: { Pace: 78, Finishing: 76, "Shot Power": 74, "Long Shots": 78, Volleys: 75, Passing: 92, Vision: 96, Dribbling: 94, "Ball Control": 95, Composure: 96, Defending: 60, Heading: 50, Athleticism: 76, "Soccer IQ": 99, Strength: 58, Stamina: 82 } },
+            { name: "Gerard Piqué", ratings: { Pace: 72, Finishing: 45, "Shot Power": 60, "Long Shots": 50, Volleys: 48, Passing: 78, Vision: 76, Dribbling: 70, "Ball Control": 76, Composure: 85, Defending: 88, Heading: 89, Athleticism: 78, "Soccer IQ": 90, Strength: 86, Stamina: 83 } }
+        ]},
+        { team: "2008-09 Barcelona", type: "classic", league: "La Liga", players: [
+            { name: "Xavi Hernandez", ratings: { Pace: 70, Finishing: 72, "Shot Power": 74, "Long Shots": 78, Volleys: 70, Passing: 96, Vision: 99, Dribbling: 88, "Ball Control": 95, Composure: 98, Defending: 65, Heading: 45, Athleticism: 74, "Soccer IQ": 99, Strength: 60, Stamina: 90 } },
+            { name: "Thierry Henry", ratings: { Pace: 92, Finishing: 93, "Shot Power": 89, "Long Shots": 86, Volleys: 88, Passing: 81, Vision: 87, Dribbling: 91, "Ball Control": 92, Composure: 91, Defending: 40, Heading: 70, Athleticism: 89, "Soccer IQ": 95, Strength: 78, Stamina: 84 } },
+            { name: "Carles Puyol", ratings: { Pace: 75, Finishing: 40, "Shot Power": 65, "Long Shots": 45, Volleys: 50, Passing: 70, Vision: 68, Dribbling: 65, "Ball Control": 72, Composure: 90, Defending: 94, Heading: 93, Athleticism: 88, "Soccer IQ": 96, Strength: 91, Stamina: 95 } }
+        ]},
+        { team: "2011-12 Real Madrid", type: "classic", league: "La Liga", players: [
+            { name: "Cristiano Ronaldo", ratings: { Pace: 96, Finishing: 96, "Shot Power": 95, "Long Shots": 94, Volleys: 89, Passing: 82, Vision: 86, Dribbling: 92, "Ball Control": 93, Composure: 92, Defending: 35, Heading: 94, Athleticism: 96, "Soccer IQ": 93, Strength: 88, Stamina: 92 } },
+            { name: "Mesut Özil", ratings: { Pace: 82, Finishing: 78, "Shot Power": 72, "Long Shots": 76, Volleys: 74, Passing: 95, Vision: 98, Dribbling: 91, "Ball Control": 94, Composure: 90, Defending: 45, Heading: 42, Athleticism: 75, "Soccer IQ": 96, Strength: 55, Stamina: 83 } },
+            { name: "Sergio Ramos", ratings: { Pace: 80, Finishing: 60, "Shot Power": 75, "Long Shots": 68, Volleys: 62, Passing: 76, Vision: 75, Dribbling: 72, "Ball Control": 78, Composure: 85, Defending: 91, Heading: 92, Athleticism: 89, "Soccer IQ": 89, Strength: 89, Stamina: 90 } }
+        ]},
+        { team: "1998-99 Manchester United", type: "classic", league: "Premier League", players: [
+            { name: "David Beckham", ratings: { Pace: 78, Finishing: 82, "Shot Power": 89, "Long Shots": 96, Volleys: 85, Passing: 97, Vision: 96, Dribbling: 82, "Ball Control": 88, Composure: 90, Defending: 68, Heading: 72, Athleticism: 82, "Soccer IQ": 95, Strength: 72, Stamina: 96 } },
+            { name: "Ryan Giggs", ratings: { Pace: 92, Finishing: 80, "Shot Power": 78, "Long Shots": 79, Volleys: 76, Passing: 86, Vision: 88, Dribbling: 93, "Ball Control": 90, Composure: 86, Defending: 50, Heading: 55, Athleticism: 90, "Soccer IQ": 92, Strength: 70, Stamina: 91 } },
+            { name: "Roy Keane", ratings: { Pace: 72, Finishing: 74, "Shot Power": 80, "Long Shots": 75, Volleys: 70, Passing: 84, Vision: 82, Dribbling: 76, "Ball Control": 80, Composure: 88, Defending: 91, Heading: 85, Athleticism: 84, "Soccer IQ": 97, Strength: 89, Stamina: 98 } }
+        ]},
+        { team: "2003-04 Arsenal Invincibles", type: "classic", league: "Premier League", players: [
+            { name: "Thierry Henry", ratings: { Pace: 95, Finishing: 95, "Shot Power": 90, "Long Shots": 87, Volleys: 89, Passing: 83, Vision: 88, Dribbling: 94, "Ball Control": 93, Composure: 93, Defending: 38, Heading: 70, Athleticism: 91, "Soccer IQ": 96, Strength: 80, Stamina: 86 } },
+            { name: "Patrick Vieira", ratings: { Pace: 79, Finishing: 72, "Shot Power": 82, "Long Shots": 78, Volleys: 72, Passing: 85, Vision: 86, Dribbling: 82, "Ball Control": 86, Composure: 89, Defending: 92, Heading: 90, Athleticism: 93, "Soccer IQ": 95, Strength: 92, Stamina: 97 } }
+        ]},
+        { team: "2019-20 Liverpool", type: "classic", league: "Premier League", players: [
+            { name: "Mohamed Salah", ratings: { Pace: 93, Finishing: 90, "Shot Power": 87, "Long Shots": 84, Volleys: 82, Passing: 82, Vision: 85, Dribbling: 92, "Ball Control": 91, Composure: 89, Defending: 45, Heading: 60, Athleticism: 90, "Soccer IQ": 92, Strength: 75, Stamina: 95 } },
+            { name: "Virgil van Dijk", ratings: { Pace: 78, Finishing: 60, "Shot Power": 80, "Long Shots": 70, Volleys: 65, Passing: 82, Vision: 80, Dribbling: 75, "Ball Control": 82, Composure: 93, Defending: 93, Heading: 95, Athleticism: 88, "Soccer IQ": 95, Strength: 94, Stamina: 89 } }
+        ]},
+        { team: "2012-13 Bayern Munich", type: "classic", league: "Bundesliga", players: [
+            { name: "Franck Ribéry", ratings: { Pace: 90, Finishing: 85, "Shot Power": 82, "Long Shots": 83, Volleys: 84, Passing: 88, Vision: 90, Dribbling: 95, "Ball Control": 94, Composure: 90, Defending: 52, Heading: 50, Athleticism: 86, "Soccer IQ": 94, Strength: 68, Stamina: 91 } },
+            { name: "Bastian Schweinsteiger", ratings: { Pace: 74, Finishing: 81, "Shot Power": 86, "Long Shots": 85, Volleys: 80, Passing: 89, Vision: 91, Dribbling: 84, "Ball Control": 89, Composure: 94, Defending: 85, Heading: 78, Athleticism: 82, "Soccer IQ": 97, Strength: 85, Stamina: 96 } }
+        ]},
+        { team: "2009-10 Inter Milan", type: "classic", league: "Serie A", players: [
+            { name: "Javier Zanetti", ratings: { Pace: 84, Finishing: 68, "Shot Power": 75, "Long Shots": 72, Volleys: 68, Passing: 86, Vision: 85, Dribbling: 86, "Ball Control": 88, Composure: 95, Defending: 90, Heading: 70, Athleticism: 92, "Soccer IQ": 98, Strength: 80, Stamina: 99 } },
+            { name: "Samuel Eto'o", ratings: { Pace: 92, Finishing: 91, "Shot Power": 88, "Long Shots": 82, Volleys: 86, Passing: 78, Vision: 82, Dribbling: 89, "Ball Control": 90, Composure: 91, Defending: 42, Heading: 74, Athleticism: 93, "Soccer IQ": 93, Strength: 76, Stamina: 94 } }
+        ]},
+        { team: "2006-07 AC Milan", type: "classic", league: "Serie A", players: [
+            { name: "Kaká", ratings: { Pace: 94, Finishing: 90, "Shot Power": 88, "Long Shots": 89, Volleys: 82, Passing: 88, Vision: 92, Dribbling: 95, "Ball Control": 94, Composure: 93, Defending: 40, Heading: 65, Athleticism: 91, "Soccer IQ": 95, Strength: 74, Stamina: 92 } },
+            { name: "Paolo Maldini", ratings: { Pace: 76, Finishing: 50, "Shot Power": 65, "Long Shots": 55, Volleys: 50, Passing: 79, Vision: 78, Dribbling: 74, "Ball Control": 82, Composure: 97, Defending: 96, Heading: 90, Athleticism: 85, "Soccer IQ": 99, Strength: 85, Stamina: 90 } }
+        ]},
+        { team: "2016-17 Juventus", type: "classic", league: "Serie A", players: [
+            { name: "Gianluigi Buffon", ratings: { Pace: 65, Finishing: 20, "Shot Power": 30, "Long Shots": 25, Volleys: 20, Passing: 70, Vision: 70, Dribbling: 50, "Ball Control": 65, Composure: 96, Defending: 40, Heading: 50, Athleticism: 80, "Soccer IQ": 98, Strength: 78, Stamina: 85 } },
+            { name: "Giorgio Chiellini", ratings: { Pace: 70, Finishing: 40, "Shot Power": 55, "Long Shots": 45, Volleys: 40, Passing: 68, Vision: 65, Dribbling: 60, "Ball Control": 68, Composure: 89, Defending: 94, Heading: 93, Athleticism: 84, "Soccer IQ": 95, Strength: 93, Stamina: 88 } }
+        ]},
+
+        // --- CURRENT TEAMS ---
+        { team: "Barcelona (Current)", type: "current", league: "La Liga", players: [
+            { name: "Lamine Yamal", ratings: { Pace: 88, Finishing: 82, "Shot Power": 79, "Long Shots": 81, Volleys: 76, Passing: 85, Vision: 89, Dribbling: 92, "Ball Control": 91, Composure: 86, Defending: 40, Heading: 52, Athleticism: 82, "Soccer IQ": 92, Strength: 60, Stamina: 86 } },
+            { name: "Robert Lewandowski", ratings: { Pace: 75, Finishing: 94, "Shot Power": 91, "Long Shots": 86, Volleys: 92, Passing: 79, Vision: 83, Dribbling: 85, "Ball Control": 89, Composure: 95, Defending: 44, Heading: 90, Athleticism: 80, "Soccer IQ": 96, Strength: 85, Stamina: 84 } },
+            { name: "Pedri", ratings: { Pace: 78, Finishing: 76, "Shot Power": 74, "Long Shots": 78, Volleys: 74, Passing: 90, Vision: 93, Dribbling: 91, "Ball Control": 93, Composure: 93, Defending: 68, Heading: 50, Athleticism: 76, "Soccer IQ": 96, Strength: 62, Stamina: 89 } }
+        ]},
+        { team: "Real Madrid (Current)", type: "current", league: "La Liga", players: [
+            { name: "Kylian Mbappé", ratings: { Pace: 97, Finishing: 93, "Shot Power": 90, "Long Shots": 84, Volleys: 86, Passing: 82, Vision: 85, Dribbling: 93, "Ball Control": 92, Composure: 89, Defending: 36, Heading: 72, Athleticism: 95, "Soccer IQ": 91, Strength: 78, Stamina: 88 } },
+            { name: "Jude Bellingham", ratings: { Pace: 81, Finishing: 87, "Shot Power": 84, "Long Shots": 85, Volleys: 80, Passing: 86, Vision: 88, Dribbling: 89, "Ball Control": 90, Composure: 92, Defending: 78, Heading: 84, Athleticism: 86, "Soccer IQ": 94, Strength: 83, Stamina: 94 } },
+            { name: "Vinícius Júnior", ratings: { Pace: 95, Finishing: 89, "Shot Power": 82, "Long Shots": 80, Volleys: 78, Passing: 83, Vision: 87, Dribbling: 96, "Ball Control": 93, Composure: 86, Defending: 32, Heading: 58, Athleticism: 92, "Soccer IQ": 89, Strength: 68, Stamina: 90 } }
+        ]},
+        { team: "Atletico Madrid (Current)", type: "current", league: "La Liga", players: [
+            { name: "Antoine Griezmann", ratings: { Pace: 80, Finishing: 88, "Shot Power": 85, "Long Shots": 86, Volleys: 85, Passing: 88, Vision: 90, Dribbling: 88, "Ball Control": 90, Composure: 92, Defending: 62, Heading: 70, Athleticism: 80, "Soccer IQ": 96, Strength: 70, Stamina: 92 } },
+            { name: "Julián Álvarez", ratings: { Pace: 85, Finishing: 86, "Shot Power": 87, "Long Shots": 84, Volleys: 83, Passing: 80, Vision: 83, Dribbling: 86, "Ball Control": 87, Composure: 88, Defending: 52, Heading: 68, Athleticism: 84, "Soccer IQ": 90, Strength: 74, Stamina: 94 } }
+        ]},
+        { team: "Real Betis (Current)", type: "current", league: "La Liga", players: [
+            { name: "Isco", ratings: { Pace: 72, Finishing: 79, "Shot Power": 78, "Long Shots": 80, Volleys: 75, Passing: 86, Vision: 89, Dribbling: 90, "Ball Control": 91, Composure: 90, Defending: 54, Heading: 45, Athleticism: 72, "Soccer IQ": 92, Strength: 62, Stamina: 78 } }
+        ]},
+        { team: "Sevilla (Current)", type: "current", league: "La Liga", players: [
+            { name: "Dodi Lukebakio", ratings: { Pace: 88, Finishing: 79, "Shot Power": 80, "Long Shots": 78, Volleys: 74, Passing: 75, Vision: 76, Dribbling: 85, "Ball Control": 84, Composure: 78, Defending: 35, Heading: 50, Athleticism: 85, "Soccer IQ": 80, Strength: 70, Stamina: 82 } }
+        ]},
+        { team: "Villarreal (Current)", type: "current", league: "La Liga", players: [
+            { name: "Gerard Moreno", ratings: { Pace: 78, Finishing: 86, "Shot Power": 82, "Long Shots": 81, Volleys: 83, Passing: 82, Vision: 84, Dribbling: 83, "Ball Control": 85, Composure: 88, Defending: 48, Heading: 75, Athleticism: 78, "Soccer IQ": 91, Strength: 75, Stamina: 85 } }
+        ]},
+        { team: "Man City (Current)", type: "current", league: "Premier League", players: [
+            { name: "Erling Haaland", ratings: { Pace: 89, Finishing: 96, "Shot Power": 94, "Long Shots": 82, Volleys: 88, Passing: 68, Vision: 74, Dribbling: 80, "Ball Control": 82, Composure: 89, Defending: 40, Heading: 92, Athleticism: 93, "Soccer IQ": 88, Strength: 95, Stamina: 87 } },
+            { name: "Kevin De Bruyne", ratings: { Pace: 74, Finishing: 86, "Shot Power": 91, "Long Shots": 92, Volleys: 84, Passing: 95, Vision: 98, Dribbling: 86, "Ball Control": 91, Composure: 93, Defending: 64, Heading: 55, Athleticism: 77, "Soccer IQ": 98, Strength: 76, Stamina: 86 } },
+            { name: "Rodri", ratings: { Pace: 65, Finishing: 80, "Shot Power": 84, "Long Shots": 82, Volleys: 78, Passing: 88, Vision: 89, Dribbling: 82, "Ball Control": 87, Composure: 94, Defending: 87, Heading: 84, Athleticism: 80, "Soccer IQ": 96, Strength: 88, Stamina: 94 } }
+        ]},
+        { team: "Manchester United (Current)", type: "current", league: "Premier League", players: [
+            { name: "Bruno Fernandes", ratings: { Pace: 75, Finishing: 85, "Shot Power": 89, "Long Shots": 90, Volleys: 84, Passing: 90, Vision: 92, Dribbling: 83, "Ball Control": 86, Composure: 88, Defending: 68, Heading: 60, Athleticism: 80, "Soccer IQ": 92, Strength: 70, Stamina: 96 } },
+            { name: "Marcus Rashford", ratings: { Pace: 92, Finishing: 83, "Shot Power": 88, "Long Shots": 85, Volleys: 80, Passing: 77, Vision: 79, Dribbling: 86, "Ball Control": 85, Composure: 82, Defending: 38, Heading: 68, Athleticism: 88, "Soccer IQ": 83, Strength: 76, Stamina: 85 } }
+        ]},
+        { team: "Liverpool (Current)", type: "current", league: "Premier League", players: [
+            { name: "Mohamed Salah", ratings: { Pace: 90, Finishing: 89, "Shot Power": 86, "Long Shots": 83, Volleys: 82, Passing: 83, Vision: 85, Dribbling: 90, "Ball Control": 90, Composure: 89, Defending: 45, Heading: 60, Athleticism: 89, "Soccer IQ": 92, Strength: 74, Stamina: 93 } },
+            { name: "Alexis Mac Allister", ratings: { Pace: 74, Finishing: 81, "Shot Power": 83, "Long Shots": 84, Volleys: 78, Passing: 86, Vision: 87, Dribbling: 84, "Ball Control": 87, Composure: 88, Defending: 78, Heading: 65, Athleticism: 78, "Soccer IQ": 91, Strength: 73, Stamina: 90 } }
+        ]},
+        { team: "Arsenal (Current)", type: "current", league: "Premier League", players: [
+            { name: "Bukayo Saka", ratings: { Pace: 89, Finishing: 85, "Shot Power": 83, "Long Shots": 82, Volleys: 79, Passing: 86, Vision: 88, Dribbling: 90, "Ball Control": 90, Composure: 89, Defending: 62, Heading: 65, Athleticism: 86, "Soccer IQ": 91, Strength: 72, Stamina: 92 } },
+            { name: "Declan Rice", ratings: { Pace: 78, Finishing: 74, "Shot Power": 82, "Long Shots": 80, Volleys: 72, Passing: 84, Vision: 83, Dribbling: 81, "Ball Control": 84, Composure: 89, Defending: 88, Heading: 82, Athleticism: 88, "Soccer IQ": 93, Strength: 87, Stamina: 97 } }
+        ]},
+        { team: "Newcastle United (Current)", type: "current", league: "Premier League", players: [
+            { name: "Alexander Isak", ratings: { Pace: 89, Finishing: 87, "Shot Power": 85, "Long Shots": 81, Volleys: 82, Passing: 78, Vision: 80, Dribbling: 88, "Ball Control": 87, Composure: 86, Defending: 32, Heading: 74, Athleticism: 86, "Soccer IQ": 88, Strength: 75, Stamina: 85 } }
+        ]},
+        { team: "Tottenham Hotspur (Current)", type: "current", league: "Premier League", players: [
+            { name: "Son Heung-min", ratings: { Pace: 88, Finishing: 90, "Shot Power": 89, "Long Shots": 88, Volleys: 87, Passing: 82, Vision: 85, Dribbling: 86, "Ball Control": 88, Composure: 90, Defending: 50, Heading: 68, Athleticism: 86, "Soccer IQ": 92, Strength: 70, Stamina: 92 } }
+        ]},
+        { team: "West Ham United (Current)", type: "current", league: "Premier League", players: [
+            { name: "Jarrod Bowen", ratings: { Pace: 84, Finishing: 83, "Shot Power": 82, "Long Shots": 80, Volleys: 79, Passing: 78, Vision: 79, Dribbling: 82, "Ball Control": 83, Composure: 84, Defending: 55, Heading: 76, Athleticism: 85, "Soccer IQ": 87, Strength: 76, Stamina: 93 } }
+        ]},
+        { team: "Aston Villa (Current)", type: "current", league: "Premier League", players: [
+            { name: "Ollie Watkins", ratings: { Pace: 86, Finishing: 85, "Shot Power": 83, "Long Shots": 78, Volleys: 81, Passing: 77, Vision: 79, Dribbling: 83, "Ball Control": 84, Composure: 85, Defending: 45, Heading: 82, Athleticism: 88, "Soccer IQ": 88, Strength: 80, Stamina: 91 } }
+        ]},
+        { team: "Brighton (Current)", type: "current", league: "Premier League", players: [
+            { name: "Kaoru Mitoma", ratings: { Pace: 90, Finishing: 79, "Shot Power": 76, "Long Shots": 75, Volleys: 74, Passing: 78, Vision: 80, Dribbling: 91, "Ball Control": 88, Composure: 83, Defending: 42, Heading: 55, Athleticism: 84, "Soccer IQ": 86, Strength: 60, Stamina: 88 } }
+        ]},
+        { team: "Chelsea (Current)", type: "current", league: "Premier League", players: [
+            { name: "Cole Palmer", ratings: { Pace: 80, Finishing: 87, "Shot Power": 84, "Long Shots": 86, Volleys: 81, Passing: 87, Vision: 90, Dribbling: 89, "Ball Control": 90, Composure: 91, Defending: 52, Heading: 60, Athleticism: 78, "Soccer IQ": 93, Strength: 65, Stamina: 86 } }
+        ]},
+        { team: "Leeds United", type: "current", league: "Championship / Premier League", players: [
+            { name: "Wilfried Gnonto", ratings: { Pace: 88, Finishing: 75, "Shot Power": 76, "Long Shots": 72, Volleys: 70, Passing: 74, Vision: 76, Dribbling: 86, "Ball Control": 84, Composure: 78, Defending: 40, Heading: 50, Athleticism: 86, "Soccer IQ": 82, Strength: 65, Stamina: 88 } }
+        ]},
+        { team: "Crystal Palace (Current)", type: "current", league: "Premier League", players: [
+            { name: "Eberechi Eze", ratings: { Pace: 82, Finishing: 80, "Shot Power": 82, "Long Shots": 83, Volleys: 78, Passing: 83, Vision: 86, "Ball Control": 90, "Ball Control": 90, Composure: 86, Defending: 50, Heading: 55, Athleticism: 81, "Soccer IQ": 89, Strength: 72, Stamina: 85 } }
+        ]},
+        { team: "Bayern Munich (Current)", type: "current", league: "Bundesliga", players: [
+            { name: "Harry Kane", ratings: { Pace: 68, Finishing: 95, "Shot Power": 93, "Long Shots": 89, Volleys: 91, Passing: 87, Vision: 92, Dribbling: 83, "Ball Control": 88, Composure: 94, Defending: 51, Heading: 88, Athleticism: 78, "Soccer IQ": 97, Strength: 84, Stamina: 88 } },
+            { name: "Jamal Musiala", ratings: { Pace: 87, Finishing: 82, "Shot Power": 77, "Long Shots": 79, Volleys: 76, Passing: 84, Vision: 88, Dribbling: 94, "Ball Control": 93, Composure: 88, Defending: 58, Heading: 54, Athleticism: 82, "Soccer IQ": 91, Strength: 62, Stamina: 86 } }
+        ]},
+        { team: "Borussia Dortmund (Current)", type: "current", league: "Bundesliga", players: [
+            { name: "Serhou Guirassy", ratings: { Pace: 80, Finishing: 86, "Shot Power": 85, "Long Shots": 79, Volleys: 82, Passing: 75, Vision: 77, Dribbling: 82, "Ball Control": 85, Composure: 86, Defending: 38, Heading: 85, Athleticism: 83, "Soccer IQ": 87, Strength: 84, Stamina: 85 } }
+        ]},
+        { team: "Bayer Leverkusen (Current)", type: "current", league: "Bundesliga", players: [
+            { name: "Florian Wirtz", ratings: { Pace: 84, Finishing: 84, "Shot Power": 81, "Long Shots": 83, Volleys: 78, Passing: 88, Vision: 92, Dribbling: 91, "Ball Control": 92, Composure: 91, Defending: 58, Heading: 55, Athleticism: 81, "Soccer IQ": 95, Strength: 64, Stamina: 89 } }
+        ]},
+        { team: "Eintracht Frankfurt (Current)", type: "current", league: "Bundesliga", players: [
+            { name: "Omar Marmoush", ratings: { Pace: 89, Finishing: 83, "Shot Power": 84, "Long Shots": 82, Volleys: 78, Passing: 78, Vision: 80, Dribbling: 86, "Ball Control": 85, Composure: 84, Defending: 40, Heading: 65, Athleticism: 88, "Soccer IQ": 85, Strength: 74, Stamina: 89 } }
+        ]},
+        { team: "RB Leipzig (Current)", type: "current", league: "Bundesliga", players: [
+            { name: "Xavi Simons", ratings: { Pace: 87, Finishing: 80, "Shot Power": 79, "Long Shots": 81, Volleys: 76, Passing: 84, Vision: 86, "Ball Control": 89, "Ball Control": 89, Composure: 86, Defending: 52, Heading: 50, Athleticism: 83, "Soccer IQ": 89, Strength: 60, Stamina: 90 } }
+        ]},
+        { team: "Inter Milan (Current)", type: "current", league: "Serie A", players: [
+            { name: "Lautaro Martínez", ratings: { Pace: 83, Finishing: 89, "Shot Power": 87, "Long Shots": 82, Volleys: 85, Passing: 78, Vision: 82, Dribbling: 86, "Ball Control": 87, Composure: 90, Defending: 50, Heading: 81, Athleticism: 85, "Soccer IQ": 91, Strength: 82, Stamina: 92 } }
+        ]},
+        { team: "AC Milan (Current)", type: "current", league: "Serie A", players: [
+            { name: "Christian Pulisic", ratings: { Pace: 87, Finishing: 81, "Shot Power": 78, "Long Shots": 79, Volleys: 75, Passing: 80, Vision: 82, Dribbling: 87, "Ball Control": 86, Composure: 84, Defending: 45, Heading: 60, Athleticism: 85, "Soccer IQ": 87, Strength: 65, Stamina: 88 } }
+        ]},
+        { team: "Napoli (Current)", type: "current", league: "Serie A", players: [
+            { name: "Khvicha Kvaratskhelia", ratings: { Pace: 88, Finishing: 82, "Shot Power": 83, "Long Shots": 84, Volleys: 78, Passing: 82, Vision: 85, "Ball Control": 91, "Ball Control": 90, Composure: 86, Defending: 40, Heading: 60, Athleticism: 86, "Soccer IQ": 89, Strength: 72, Stamina: 89 } }
+        ]},
+        { team: "Juventus (Current)", type: "current", league: "Serie A", players: [
+            { name: "Dusan Vlahovic", ratings: { Pace: 81, Finishing: 88, "Shot Power": 90, "Long Shots": 83, Volleys: 85, Passing: 72, Vision: 75, Dribbling: 80, "Ball Control": 83, Composure: 86, Defending: 35, Heading: 84, Athleticism: 84, "Soccer IQ": 86, Strength: 88, Stamina: 84 } }
+        ]},
+        { team: "Como (Current)", type: "current", league: "Serie A", players: [
+            { name: "Nico Paz", ratings: { Pace: 76, Finishing: 78, "Shot Power": 80, "Long Shots": 82, Volleys: 75, Passing: 82, Vision: 85, Dribbling: 84, "Ball Control": 85, Composure: 83, Defending: 48, Heading: 55, Athleticism: 76, "Soccer IQ": 88, Strength: 65, Stamina: 82 } }
+        ]},
+        { team: "Atalanta (Current)", type: "current", league: "Serie A", players: [
+            { name: "Ademola Lookman", ratings: { Pace: 88, Finishing: 84, "Shot Power": 82, "Long Shots": 81, Volleys: 79, Passing: 80, Vision: 83, "Ball Control": 89, "Ball Control": 88, Composure: 85, Defending: 42, Heading: 58, Athleticism: 86, "Soccer IQ": 88, Strength: 68, Stamina: 88 } }
+        ]},
+        { team: "Roma (Current)", type: "current", league: "Serie A", players: [
+            { name: "Paulo Dybala", ratings: { Pace: 80, Finishing: 87, "Shot Power": 84, "Long Shots": 88, Volleys: 82, Passing: 87, Vision: 90, "Ball Control": 92, "Ball Control": 91, Composure: 91, Defending: 42, Heading: 50, Athleticism: 76, "Soccer IQ": 93, Strength: 60, Stamina: 80 } }
+        ]},
+        { team: "Lazio (Current)", type: "current", league: "Serie A", players: [
+            { name: "Mattia Zaccagni", ratings: { Pace: 83, Finishing: 80, "Shot Power": 78, "Long Shots": 77, Volleys: 75, Passing: 80, Vision: 82, "Ball Control": 85, "Ball Control": 84, Composure: 83, Defending: 50, Heading: 60, Athleticism: 83, "Soccer IQ": 86, Strength: 68, Stamina: 87 } }
+        ]},
+        { team: "PSG (Current)", type: "current", league: "Ligue 1", players: [
+            { name: "Ousmane Dembélé", ratings: { Pace: 93, Finishing: 80, "Shot Power": 82, "Long Shots": 79, Volleys: 76, Passing: 83, Vision: 85, "Ball Control": 90, "Ball Control": 89, Composure: 82, Defending: 36, Heading: 55, Athleticism: 88, "Soccer IQ": 86, Strength: 62, Stamina: 84 } }
+        ]},
+        { team: "Lens (Current)", type: "current", league: "Ligue 1", players: [
+            { name: "Przemyslaw Frankowski", ratings: { Pace: 87, Finishing: 72, "Shot Power": 75, "Long Shots": 73, Volleys: 70, Passing: 76, Vision: 75, Dribbling: 80, "Ball Control": 81, Composure: 79, Defending: 74, Heading: 65, Athleticism: 89, "Soccer IQ": 82, Strength: 72, Stamina: 94 } }
+        ]},
+        { team: "Marseille (Current)", type: "current", league: "Ligue 1", players: [
+            { name: "Mason Greenwood", ratings: { Pace: 85, Finishing: 86, "Shot Power": 88, "Long Shots": 87, Volleys: 83, Passing: 79, Vision: 81, "Ball Control": 86, "Ball Control": 85, Composure: 85, Defending: 35, Heading: 60, Athleticism: 84, "Soccer IQ": 86, Strength: 70, Stamina: 83 } }
+        ]},
+        { team: "Lyon (Current)", type: "current", league: "Ligue 1", players: [
+            { name: "Alexandre Lacazette", ratings: { Pace: 76, Finishing: 87, "Shot Power": 86, "Long Shots": 80, Volleys: 84, Passing: 80, Vision: 82, "Ball Control": 86, "Ball Control": 87, Composure: 90, Defending: 40, Heading: 72, Athleticism: 78, "Soccer IQ": 90, Strength: 82, Stamina: 82 } }
+        ]}
+    ];
+
+    let gameState = {
+        position: "",
+        round: 0,
+        maxRounds: 10,
+        currentTeam: null,
+        playerBuild: {},
+        availableTeams: []
+    };
+
+    function selectPosition(pos) {
+        gameState.position = pos;
+        document.querySelectorAll('#step-position .option-card').forEach(c => c.classList.remove('selected'));
+        event.target.classList.add('selected');
+        document.getElementById('start-draft-btn').classList.remove('hidden');
+    }
+
+    function startDraft() {
+        document.getElementById('step-position').classList.add('hidden');
+        document.getElementById('step-draft').classList.remove('hidden');
+        initAttributeProgress();
+        spinTeam();
+    }
+
+    function initAttributeProgress() {
+        const list = document.getElementById('attribute-progress-list');
+        list.innerHTML = "";
+        attributesList.forEach(attr => {
+            list.innerHTML += `
+                <div class="attribute-item" id="attr-slot-${attr}">
+                    <span>${attr}</span>
+                    <span class="grade-badge" id="val-${attr}">Locked</span>
+                </div>
+            `;
+        });
+    }
+
+    function spinTeam() {
+        const randomIndex = Math.floor(Math.random() * teamsDatabase.length);
+        gameState.currentTeam = teamsDatabase[randomIndex];
+        
+        if (!gameState.availableTeams.includes(gameState.currentTeam.team)) {
+            gameState.availableTeams.push(gameState.currentTeam.team);
+        }
+
+        const isClassic = gameState.currentTeam.type === 'classic';
+        const badgeHTML = isClassic ? 
+            `<span class="team-banner classic-badge">⭐ SPECIAL CLASSIC PULL</span>` : 
+            `<span class="team-banner current-badge">⚡ CURRENT TEAM</span>`;
+        
+        document.getElementById('team-type-tag').innerHTML = badgeHTML;
+        document.getElementById('current-spun-team').innerText = gameState.currentTeam.team;
+        
+        const rosterDiv = document.getElementById('roster-container');
+        rosterDiv.classList.remove('hidden');
+        rosterDiv.innerHTML = "<h4>Select a Player to extract an attribute from:</h4>";
+
+        gameState.currentTeam.players.forEach(player => {
+            rosterDiv.innerHTML += `
+                <div class="player-card-option" onclick='selectPlayerFromTeam(${JSON.stringify(player)})'>
+                    <span><strong>${player.name}</strong></span>
+                    <span style="color:var(--text-muted); font-size:0.85rem;">Click to Draft Attributes</span>
+                </div>
+            `;
+        });
+    }
+
+    function selectPlayerFromTeam(player) {
+        const unassignedAttrs = attributesList.filter(attr => !gameState.playerBuild[attr]);
+        if (unassignedAttrs.length === 0) {
+            finalizeBuild();
+            return;
+        }
+
+        const shuffled = unassignedAttrs.sort(() => 0.5 - Math.random());
+        const choices = shuffled.slice(0, 3);
+
+        let choiceHtml = `<h4>Choose 1 attribute from ${player.name}:</h4><div class="grid-options">`;
+        choices.forEach(attr => {
+            const rawVal = player.ratings[attr] || 75;
+            const grade = getLetterGrade(rawVal);
+            choiceHtml += `<div class="option-card" onclick="lockAttribute('${attr}', ${rawVal})"><strong>${attr}</strong><br><span class="grade-badge">${grade} (${rawVal})</span></div>`;
+        });
+        choiceHtml += `</div>`;
+
+        document.getElementById('roster-container').innerHTML = choiceHtml;
+    }
+
+    function lockAttribute(attr, val) {
+        gameState.playerBuild[attr] = val;
+        gameState.round++;
+        
+        document.getElementById(`val-${attr}`).innerText = `${getLetterGrade(val)} (${val})`;
+        document.getElementById(`val-${attr}`).className = `grade-badge ${getGradeClass(getLetterGrade(val))}`;
+        document.getElementById(`attr-slot-${attr}`).classList.add('locked');
+
+        document.getElementById('draft-round').innerText = gameState.round + 1;
+
+        if (gameState.round >= gameState.maxRounds || Object.keys(gameState.playerBuild).length >= attributesList.length) {
+            finalizeBuild();
+        } else {
+            spinTeam();
+        }
+    }
+
+    function getLetterGrade(score) {
+        if (score >= 98) return 'S';
+        if (score >= 93) return 'A+';
+        if (score >= 88) return 'A';
+        if (score >= 83) return 'B+';
+        if (score >= 78) return 'B';
+        if (score >= 70) return 'C+';
+        return 'F';
+    }
+
+    function getGradeClass(grade) {
+        if (grade === 'S') return 'grade-S';
+        if (grade.startsWith('A')) return 'grade-A';
+        if (grade.startsWith('B')) return 'grade-B';
+        return 'grade-D';
+    }
+
+    function finalizeBuild() {
+        document.getElementById('step-draft').classList.add('hidden');
+        document.getElementById('step-reveal').classList.remove('hidden');
+
+        document.getElementById('reveal-position').innerText = `Position: ${gameState.position}`;
+        
+        let total = 0, count = 0;
+        for (let k in gameState.playerBuild) {
+            total += gameState.playerBuild[k];
+            count++;
+        }
+        let avg = count > 0 ? Math.round(total / count) : 75;
+        let overallGrade = getLetterGrade(avg);
+
+        document.getElementById('reveal-grade').innerText = `${overallGrade} (${avg} OVR)`;
+        document.getElementById('reveal-grade').className = `grade-badge ${getGradeClass(overallGrade)}`;
+
+        let archetype = "Box-to-Box Midfielder";
+        if (gameState.position === "Striker") archetype = avg > 90 ? "Elite Poacher & Target Man" : "Advanced Forward";
+        if (gameState.position === "Winger") archetype = avg > 90 ? "Inverted Winger & Playmaker" : "Touchline Flier";
+        if (gameState.position === "Centerback") archetype = avg > 90 ? "Ball-Playing Stopper" : "Rock-Solid Defender";
+        document.getElementById('reveal-archetype').innerText = archetype;
+
+        const finalAttrList = document.getElementById('final-attribute-list');
+        finalAttrList.innerHTML = "";
+        for (let attr of attributesList) {
+            let val = gameState.playerBuild[attr] || 75;
+            let grade = getLetterGrade(val);
+            finalAttrList.innerHTML += `
+                <div class="attribute-item locked">
+                    <span>${attr}</span>
+                    <span class="grade-badge ${getGradeClass(grade)}">${grade}</span>
+                </div>
+            `;
+        }
+    }
+
+    function startCareerSelection() {
+        document.getElementById('step-reveal').classList.add('hidden');
+        document.getElementById('step-career-team').classList.remove('hidden');
+
+        const select = document.getElementById('career-team-select');
+        select.innerHTML = "";
+        gameState.availableTeams.forEach(t => {
+            select.innerHTML += `<option value="${t}">${t}</option>`;
+        });
+    }
+
+    function simulateSeason() {
+        const chosenTeam = document.getElementById('career-team-select').value;
+        document.getElementById('step-career-team').classList.add('hidden');
+        document.getElementById('step-sim').classList.remove('hidden');
+
+        let avgRating = Object.values(gameState.playerBuild).reduce((a,b) => a+b, 0) / attributesList.length;
+        let multiplier = avgRating / 85;
+
+        let goals = gameState.position === 'Striker' ? Math.floor(25 * multiplier + Math.random() * 10) : 
+                    gameState.position === 'Winger' ? Math.floor(18 * multiplier + Math.random() * 8) : 
+                    Math.floor(6 * multiplier + Math.random() * 5);
+
+        let assists = gameState.position === 'Winger' || gameState.position === 'Midfielder' ? Math.floor(15 * multiplier + Math.random() * 8) : Math.floor(5 * multiplier);
+        let cleanSheets = (gameState.position === 'Centerback' || gameState.position === 'Fullback') ? Math.floor(14 * multiplier + Math.random() * 5) : 0;
+        let motm = Math.floor(goals * 0.4 + assists * 0.3 + 5);
+
+        let wonBallonDor = avgRating >= 92 && Math.random() > 0.3;
+        let wonUCL = Math.random() > 0.5;
+        let teamWins = Math.floor(24 + Math.random() * 8);
+
+        let resultsHTML = `
+            <h3>Career Simulation with ${chosenTeam}</h3>
+            <p><strong>Position:</strong> ${gameState.position} | <strong>Rating:</strong> ${Math.round(avgRating)} OVR</p>
+            
+            <table class="stats-table">
+                <tr><th>Metric</th><th>Stat</th></tr>
+                <tr><td>Goals Scored</td><td><strong>${goals}</strong></td></tr>
+                <tr><td>Assists</td><td><strong>${assists}</strong></td></tr>
+                ${cleanSheets > 0 ? `<tr><td>Clean Sheets</td><td><strong>${cleanSheets}</strong></td></tr>` : ''}
+                <tr><td>Chances Created</td><td><strong>${Math.floor(assists * 2.5 + 20)}</strong></td></tr>
+                <tr><td>Successful Dribbles</td><td><strong>${Math.floor(45 * multiplier)}</strong></td></tr>
+                <tr><td>Man of the Match Awards</td><td><strong>${motm}</strong></td></tr>
+                <tr><td>League Player of the Months</td><td><strong>${Math.floor(motm / 3)}</strong></td></tr>
+                <tr><td>Domestic Team Wins</td><td><strong>${teamWins} Wins</strong></td></tr>
+            </table>
+
+            <h3 style="margin-top:20px;">🏆 Trophies & Honors</h3>
+            <ul style="line-height: 1.8;">
+                <li><strong>Ballon d'Or:</strong> ${wonBallonDor ? '👑 Won the Ballon d\'Or!' : 'Kylian Mbappé / Jude Bellingham'}</li>
+                <li><strong>UCL Player of the Tournament:</strong> ${wonUCL ? '🌟 Won with ' + chosenTeam : 'Vinícius Júnior'}</li>
+                <li><strong>League Player of the Season:</strong> ${avgRating > 88 ? '🏆 Winner!' : 'Runner-up'}</li>
+            </ul>
+        `;
+
+        document.getElementById('sim-results-content').innerHTML = resultsHTML;
+    }
+</script>
+
+</body>
+</html>
