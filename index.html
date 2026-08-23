@@ -240,13 +240,21 @@
         </div>
 
         <div id="active-selection-prompt" class="hidden" style="margin-bottom: 15px; padding: 10px 15px; background: rgba(251, 191, 36, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px; text-align: center;">
-            <span style="font-weight: bold; color: var(--accent-gold);">Target Stat: <span id="target-stat-name" style="color: #fff;">None</span></span> — Click a player below to assign their rating!
+            <span style="font-weight: bold; color: var(--accent-gold);">Target Stat: <span id="target-stat-name" style="color: #fff;">None</span></span> — Click a player below to view all stats and assign their rating!
         </div>
 
         <div id="roster-container" class="roster-grid hidden"></div>
 
         <h3 style="margin-top:30px;">Your Build Progress (Click any unlocked stat to target it)</h3>
         <div class="attribute-list" id="attribute-progress-list"></div>
+    </div>
+
+    <!-- PLAYER STATS MODAL/INSPECTOR -->
+    <div id="player-inspector-modal" class="card hidden" style="border: 2px solid var(--accent-gold); background: #0d1322;">
+        <h2>Player Profile: <span id="inspect-player-name" style="color: var(--accent-gold);"></span></h2>
+        <p>Review all predetermined stats below. Select one stat to lock into your build:</p>
+        <div id="inspect-stats-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin-top: 15px; max-height: 300px; overflow-y: auto;"></div>
+        <button class="btn btn-danger" onclick="closePlayerInspector()" style="margin-top: 15px;">Back to Squad</button>
     </div>
 
     <!-- STEP 3: REVEAL & ARCHETYPE -->
@@ -294,6 +302,7 @@
     let lockedCount = 0;
     let selectedAttributeTarget = null;
     let pulledCurrentTeamsForCareer = [];
+    let activeInspectedPlayer = null;
 
     const predeterminedStatsDatabase = {
         "Lionel Messi": { Pace: 92, Finishing: 95, "Shot Power": 88, "Long Shots": 91, Volleys: 88, Passing: 93, Vision: 95, Dribbling: 96, "Ball Control": 96, Composure: 95, Defending: 38, Heading: 60, Athleticism: 85, "Soccer IQ": 96, Strength: 65, Stamina: 82 },
@@ -366,472 +375,193 @@
         "Georginio Wijnaldum": { Pace: 80, Finishing: 78, "Shot Power": 80, "Long Shots": 76, Volleys: 74, Passing: 82, Vision: 80, Dribbling: 84, "Ball Control": 86, Composure: 88, Defending: 76, Heading: 80, Athleticism: 86, "Soccer IQ": 89, Strength: 82, Stamina: 95 },
         "Virgil van Dijk": { Pace: 78, Finishing: 60, "Shot Power": 82, "Long Shots": 70, Volleys: 55, Passing: 82, Vision: 81, Dribbling: 78, "Ball Control": 84, Composure: 92, Defending: 92, Heading: 94, Athleticism: 86, "Soccer IQ": 94, Strength: 93, Stamina: 88 },
         "Joe Gomez": { Pace: 82, Finishing: 48, "Shot Power": 60, "Long Shots": 50, Volleys: 45, Passing: 75, Vision: 72, Dribbling: 74, "Ball Control": 78, Composure: 82, Defending: 83, Heading: 78, Athleticism: 85, "Soccer IQ": 83, Strength: 81, Stamina: 84 },
-        "Andrew Robertson": { Pace: 85, Finishing: 65, "Shot Power": 76, "Long Shots": 72, Volleys: 62, Passing: 83, Vision: 82, Dribbling: 81, "Ball Control": 83, Composure: 86, Defending: 83, Heading: 68, Athleticism: 88, "Soccer IQ": 88, Strength: 74, Stamina: 97 },
-        "Trent Alexander-Arnold": { Pace: 77, Finishing: 70, "Shot Power": 84, "Long Shots": 86, Volleys: 75, Passing: 93, Vision: 94, Dribbling: 83, "Ball Control": 87, Composure: 88, Defending: 78, Heading: 62, Athleticism: 79, "Soccer IQ": 91, Strength: 70, Stamina: 90 },
-        "Alisson Becker": { Pace: 56, Finishing: 30, "Shot Power": 52, "Long Shots": 35, Volleys: 30, Passing: 86, Vision: 84, Dribbling: 55, "Ball Control": 65, Composure: 90, Defending: 40, Heading: 50, Athleticism: 88, "Soccer IQ": 91, Strength: 82, Stamina: 84 },
-        "Mario Mandžukić": { Pace: 74, Finishing: 87, "Shot Power": 84, "Long Shots": 78, Volleys: 86, Passing: 72, Vision: 74, Dribbling: 78, "Ball Control": 81, Composure: 86, Defending: 50, Heading: 94, Athleticism: 82, "Soccer IQ": 88, Strength: 88, Stamina: 92 },
-        "Franck Ribéry": { Pace: 86, Finishing: 83, "Shot Power": 80, "Long Shots": 82, Volleys: 79, Passing: 87, Vision: 89, Dribbling: 92, "Ball Control": 93, Composure: 90, Defending: 52, Heading: 55, Athleticism: 83, "Soccer IQ": 92, Strength: 65, Stamina: 87 },
-        "Arjen Robben": { Pace: 92, Finishing: 89, "Shot Power": 90, "Long Shots": 92, Volleys: 86, Passing: 84, Vision: 86, Dribbling: 93, "Ball Control": 94, Composure: 89, Defending: 38, Heading: 58, Athleticism: 86, "Soccer IQ": 91, Strength: 66, Stamina: 84 },
-        "Thomas Müller": { Pace: 74, Finishing: 88, "Shot Power": 82, "Long Shots": 80, Volleys: 85, Passing: 84, Vision: 88, Dribbling: 80, "Ball Control": 85, Composure: 92, Defending: 56, Heading: 82, Athleticism: 76, "Soccer IQ": 99, Strength: 70, Stamina: 93 },
-        "Bastian Schweinsteiger": { Pace: 70, Finishing: 82, "Shot Power": 85, "Long Shots": 86, Volleys: 80, Passing: 89, Vision: 90, Dribbling: 85, "Ball Control": 89, Composure: 93, Defending: 82, Heading: 80, Athleticism: 78, "Soccer IQ": 95, Strength: 82, Stamina: 94 },
-        "Javi Martínez": { Pace: 64, Finishing: 65, "Shot Power": 75, "Long Shots": 70, Volleys: 62, Passing: 81, Vision: 79, Dribbling: 76, "Ball Control": 81, Composure: 87, Defending: 87, Heading: 88, Athleticism: 75, "Soccer IQ": 91, Strength: 88, Stamina: 86 },
-        "Jérôme Boateng": { Pace: 76, Finishing: 52, "Shot Power": 76, "Long Shots": 72, Volleys: 55, Passing: 82, Vision: 80, Dribbling: 76, "Ball Control": 81, Composure: 86, Defending: 88, Heading: 87, Athleticism: 82, "Soccer IQ": 88, Strength: 90, Stamina: 85 },
-        "Dante": { Pace: 68, Finishing: 50, "Shot Power": 68, "Long Shots": 60, Volleys: 50, Passing: 78, Vision: 75, Dribbling: 74, "Ball Control": 79, Composure: 84, Defending: 86, Heading: 85, Athleticism: 76, "Soccer IQ": 86, Strength: 84, Stamina: 83 },
-        "David Alaba": { Pace: 84, Finishing: 76, "Shot Power": 84, "Long Shots": 82, Volleys: 74, Passing: 86, Vision: 85, Dribbling: 85, "Ball Control": 87, Composure: 88, Defending: 84, Heading: 76, Athleticism: 85, "Soccer IQ": 90, Strength: 76, Stamina: 92 },
-        "Philipp Lahm": { Pace: 78, Finishing: 70, "Shot Power": 72, "Long Shots": 75, Volleys: 65, Passing: 88, Vision: 89, Dribbling: 87, "Ball Control": 90, Composure: 95, Defending: 89, Heading: 55, Athleticism: 79, "Soccer IQ": 99, Strength: 62, Stamina: 95 },
-        "Manuel Neuer": { Pace: 60, Finishing: 40, "Shot Power": 60, "Long Shots": 50, Volleys: 38, Passing: 89, Vision: 87, Dribbling: 65, "Ball Control": 72, Composure: 92, Defending: 45, Heading: 50, Athleticism: 89, "Soccer IQ": 95, Strength: 84, Stamina: 88 },
-        "Robert Lewandowski": { Pace: 78, Finishing: 96, "Shot Power": 91, "Long Shots": 86, Volleys: 90, Passing: 80, Vision: 83, Dribbling: 86, "Ball Control": 89, Composure: 94, Defending: 42, Heading: 90, Athleticism: 83, "Soccer IQ": 94, Strength: 87, Stamina: 87 },
-        "Serge Gnabry": { Pace: 88, Finishing: 85, "Shot Power": 86, "Long Shots": 83, Volleys: 78, Passing: 80, Vision: 81, Dribbling: 87, "Ball Control": 88, Composure: 85, Defending: 46, Heading: 65, Athleticism: 85, "Soccer IQ": 86, Strength: 74, Stamina: 88 },
-        "Kingsley Coman": { Pace: 95, Finishing: 79, "Shot Power": 78, "Long Shots": 75, Volleys: 72, Passing: 79, Vision: 80, Dribbling: 89, "Ball Control": 89, Composure: 83, Defending: 38, Heading: 55, Athleticism: 88, "Soccer IQ": 84, Strength: 62, Stamina: 86 },
-        "Leon Goretzka": { Pace: 81, Finishing: 82, "Shot Power": 86, "Long Shots": 82, Volleys: 78, Passing: 82, Vision: 81, Dribbling: 83, "Ball Control": 85, Composure: 87, Defending: 82, Heading: 88, Athleticism: 89, "Soccer IQ": 90, Strength: 86, Stamina: 93 },
-        "Thiago Alcântara": { Pace: 72, Finishing: 76, "Shot Power": 80, "Long Shots": 83, Volleys: 82, Passing: 90, Vision: 92, Dribbling: 94, "Ball Control": 95, Composure: 93, Defending: 75, Heading: 55, Athleticism: 78, "Soccer IQ": 94, Strength: 60, Stamina: 85 },
-        "Alphonso Davies": { Pace: 96, Finishing: 70, "Shot Power": 78, "Long Shots": 72, Volleys: 65, Passing: 78, Vision: 76, Dribbling: 86, "Ball Control": 85, Composure: 82, Defending: 79, Heading: 62, Athleticism: 94, "Soccer IQ": 83, Strength: 76, Stamina: 96 },
-        "Benjamin Pavard": { Pace: 74, Finishing: 60, "Shot Power": 72, "Long Shots": 70, Volleys: 62, Passing: 78, Vision: 76, Dribbling: 75, "Ball Control": 80, Composure: 84, Defending: 84, Heading: 82, Athleticism: 76, "Soccer IQ": 86, Strength: 78, Stamina: 88 },
-        "Diego Milito": { Pace: 78, Finishing: 91, "Shot Power": 86, "Long Shots": 82, Volleys: 88, Passing: 75, Vision: 78, Dribbling: 84, "Ball Control": 86, Composure: 90, Defending: 35, Heading: 83, Athleticism: 78, "Soccer IQ": 91, Strength: 78, Stamina: 82 },
-        "Goran Pandev": { Pace: 76, Finishing: 82, "Shot Power": 80, "Long Shots": 79, Volleys: 76, Passing: 81, Vision: 83, Dribbling: 84, "Ball Control": 86, Composure: 85, Defending: 40, Heading: 68, Athleticism: 76, "Soccer IQ": 88, Strength: 70, Stamina: 80 },
-        "Wesley Sneijder": { Pace: 78, Finishing: 85, "Shot Power": 92, "Long Shots": 94, Volleys: 88, Passing: 91, Vision: 94, Dribbling: 86, "Ball Control": 90, Composure: 93, Defending: 62, Heading: 55, Athleticism: 80, "Soccer IQ": 95, Strength: 65, Stamina: 88 },
-        "Esteban Cambiasso": { Pace: 70, Finishing: 74, "Shot Power": 78, "Long Shots": 76, Volleys: 70, Passing: 86, Vision: 88, Dribbling: 82, "Ball Control": 87, Composure: 94, Defending: 88, Heading: 78, Athleticism: 78, "Soccer IQ": 97, Strength: 76, Stamina: 94 },
-        "Javier Zanetti": { Pace: 82, Finishing: 70, "Shot Power": 76, "Long Shots": 74, Volleys: 68, Passing: 85, Vision: 86, Dribbling: 86, "Ball Control": 88, Composure: 95, Defending: 87, Heading: 76, Athleticism: 90, "Soccer IQ": 98, Strength: 80, Stamina: 99 },
-        "Walter Samuel": { Pace: 68, Finishing: 45, "Shot Power": 65, "Long Shots": 50, Volleys: 45, Passing: 68, Vision: 65, Dribbling: 65, "Ball Control": 72, Composure: 85, Defending: 93, Heading: 91, Athleticism: 78, "Soccer IQ": 90, Strength: 92, Stamina: 86 },
-        "Lúcio": { Pace: 75, Finishing: 60, "Shot Power": 80, "Long Shots": 74, Volleys: 58, Passing: 74, Vision: 72, Dribbling: 76, "Ball Control": 78, Composure: 84, Defending: 90, Heading: 92, Athleticism: 84, "Soccer IQ": 88, Strength: 91, Stamina: 88 },
-        "Cristian Chivu": { Pace: 74, Finishing: 62, "Shot Power": 75, "Long Shots": 78, Volleys: 65, Passing: 80, Vision: 79, Dribbling: 76, "Ball Control": 80, Composure: 86, Defending: 86, Heading: 80, Athleticism: 76, "Soccer IQ": 89, Strength: 76, Stamina: 85 },
-        "Maicon": { Pace: 86, Finishing: 76, "Shot Power": 90, "Long Shots": 87, Volleys: 75, Passing: 83, Vision: 82, Dribbling: 85, "Ball Control": 86, Composure: 86, Defending: 84, Heading: 82, Athleticism: 90, "Soccer IQ": 89, Strength: 86, Stamina: 93 },
-        "Julio César": { Pace: 55, Finishing: 30, "Shot Power": 50, "Long Shots": 35, Volleys: 30, Passing: 75, Vision: 73, Dribbling: 52, "Ball Control": 58, Composure: 88, Defending: 40, Heading: 48, Athleticism: 89, "Soccer IQ": 90, Strength: 76, Stamina: 84 },
-        "Filippo Inzaghi": { Pace: 78, Finishing: 95, "Shot Power": 78, "Long Shots": 72, Volleys: 88, Passing: 65, Vision: 68, Dribbling: 74, "Ball Control": 78, Composure: 95, Defending: 30, Heading: 85, Athleticism: 76, "Soccer IQ": 99, Strength: 62, Stamina: 80 },
-        "Alberto Gilardino": { Pace: 74, Finishing: 88, "Shot Power": 80, "Long Shots": 76, Volleys: 84, Passing: 70, Vision: 72, Dribbling: 78, "Ball Control": 81, Composure: 88, Defending: 35, Heading: 90, Athleticism: 76, "Soccer IQ": 89, Strength: 78, Stamina: 81 },
-        "Kaká": { Pace: 91, Finishing: 89, "Shot Power": 89, "Long Shots": 87, Volleys: 82, Passing: 88, Vision: 92, Dribbling: 94, "Ball Control": 94, Composure: 91, Defending: 42, Heading: 72, Athleticism: 89, "Soccer IQ": 92, Strength: 75, Stamina: 88 },
-        "Clarence Seedorf": { Pace: 76, Finishing: 82, "Shot Power": 93, "Long Shots": 91, Volleys: 84, Passing: 88, Vision: 90, Dribbling: 89, "Ball Control": 92, Composure: 92, Defending: 78, Heading: 78, Athleticism: 85, "Soccer IQ": 93, Strength: 89, Stamina: 90 },
-        "Andrea Pirlo": { Pace: 60, Finishing: 76, "Shot Power": 85, "Long Shots": 94, Volleys: 80, Passing: 97, Vision: 98, Dribbling: 88, "Ball Control": 93, Composure: 99, Defending: 74, Heading: 54, Athleticism: 68, "Soccer IQ": 99, Strength: 60, Stamina: 88 },
-        "Gennaro Gattuso": { Pace: 74, Finishing: 55, "Shot Power": 72, "Long Shots": 68, Volleys: 55, Passing: 76, Vision: 75, Dribbling: 72, "Ball Control": 76, Composure: 85, Defending: 91, Heading: 72, Athleticism: 85, "Soccer IQ": 92, Strength: 84, Stamina: 98 },
-        "Paolo Maldini": { Pace: 80, Finishing: 60, "Shot Power": 75, "Long Shots": 68, Volleys: 60, Passing: 82, Vision: 80, Dribbling: 81, "Ball Control": 85, Composure: 96, Defending: 96, Heading: 90, Athleticism: 86, "Soccer IQ": 99, Strength: 84, Stamina: 93 },
-        "Alessandro Nesta": { Pace: 77, Finishing: 45, "Shot Power": 62, "Long Shots": 50, Volleys: 45, Passing: 75, Vision: 73, Dribbling: 74, "Ball Control": 79, Composure: 93, Defending: 95, Heading: 88, Athleticism: 82, "Soccer IQ": 96, Strength: 86, Stamina: 88 },
-        "Marek Jankulovski": { Pace: 80, Finishing: 72, "Shot Power": 81, "Long Shots": 78, Volleys: 70, Passing: 80, Vision: 79, Dribbling: 80, "Ball Control": 82, Composure: 84, Defending: 81, Heading: 70, Athleticism: 82, "Soccer IQ": 86, Strength: 74, Stamina: 89 },
-        "Cafu": { Pace: 88, Finishing: 72, "Shot Power": 80, "Long Shots": 78, Volleys: 70, Passing: 84, Vision: 85, Dribbling: 86, "Ball Control": 87, Composure: 89, Defending: 85, Heading: 72, Athleticism: 91, "Soccer IQ": 92, Strength: 78, Stamina: 98 },
-        "Dida": { Pace: 54, Finishing: 30, "Shot Power": 50, "Long Shots": 35, Volleys: 30, Passing: 72, Vision: 70, Dribbling: 50, "Ball Control": 56, Composure: 86, Defending: 40, Heading: 45, Athleticism: 88, "Soccer IQ": 87, Strength: 82, Stamina: 82 },
-        "Paulo Dybala": { Pace: 84, Finishing: 88, "Shot Power": 86, "Long Shots": 89, Volleys: 82, Passing: 86, Vision: 88, Dribbling: 92, "Ball Control": 93, Composure: 89, Defending: 38, Heading: 55, Athleticism: 81, "Soccer IQ": 90, Strength: 60, Stamina: 83 },
-        "Juan Cuadrado": { Pace: 91, Finishing: 76, "Shot Power": 79, "Long Shots": 76, Volleys: 72, Passing: 81, Vision: 80, Dribbling: 89, "Ball Control": 88, Composure: 82, Defending: 74, Heading: 60, Athleticism: 89, "Soccer IQ": 84, Strength: 68, Stamina: 90 },
-        "Miralem Pjanić": { Pace: 70, Finishing: 78, "Shot Power": 83, "Long Shots": 88, Volleys: 76, Passing: 90, Vision: 92, Dribbling: 85, "Ball Control": 90, Composure: 92, Defending: 76, Heading: 55, Athleticism: 74, "Soccer IQ": 94, Strength: 62, Stamina: 86 },
-        "Giorgio Chiellini": { Pace: 74, Finishing: 48, "Shot Power": 64, "Long Shots": 50, Volleys: 45, Passing: 70, Vision: 68, Dribbling: 68, "Ball Control": 74, Composure: 88, Defending: 94, Heading: 93, Athleticism: 83, "Soccer IQ": 93, Strength: 92, Stamina: 89 },
-        "Leonardo Bonucci": { Pace: 72, Finishing: 55, "Shot Power": 72, "Long Shots": 70, Volleys: 52, Passing: 84, Vision: 82, Dribbling: 76, "Ball Control": 81, Composure: 91, Defending: 91, Heading: 88, Athleticism: 78, "Soccer IQ": 92, Strength: 84, Stamina: 88 },
-        "Alex Sandro": { Pace: 84, Finishing: 70, "Shot Power": 78, "Long Shots": 75, Volleys: 68, Passing: 81, Vision: 80, Dribbling: 84, "Ball Control": 85, Composure: 85, Defending: 83, Heading: 74, Athleticism: 86, "Soccer IQ": 87, Strength: 78, Stamina: 91 },
-        "Gianluigi Buffon": { Pace: 52, Finishing: 30, "Shot Power": 50, "Long Shots": 35, Volleys: 30, Passing: 74, Vision: 72, Dribbling: 50, "Ball Control": 60, Composure: 95, Defending: 40, Heading: 48, Athleticism: 87, "Soccer IQ": 97, Strength: 80, Stamina: 85 },
-        "Raúl": { Pace: 80, Finishing: 92, "Shot Power": 85, "Long Shots": 83, Volleys: 88, Passing: 82, Vision: 86, Dribbling: 87, "Ball Control": 89, Composure: 95, Defending: 42, Heading: 84, Athleticism: 80, "Soccer IQ": 97, Strength: 72, Stamina: 90 },
-        "Fernando Morientes": { Pace: 78, Finishing: 89, "Shot Power": 84, "Long Shots": 79, Volleys: 86, Passing: 74, Vision: 76, Dribbling: 80, "Ball Control": 83, Composure: 88, Defending: 36, Heading: 91, Athleticism: 79, "Soccer IQ": 90, Strength: 82, Stamina: 84 },
-        "Zinedine Zidane": { Pace: 78, Finishing: 87, "Shot Power": 88, "Long Shots": 89, Volleys: 92, Passing: 95, Vision: 97, Dribbling: 95, "Ball Control": 97, Composure: 98, Defending: 65, Heading: 83, Athleticism: 81, "Soccer IQ": 99, Strength: 82, Stamina: 86 },
-        "Luís Figo": { Pace: 86, Finishing: 84, "Shot Power": 86, "Long Shots": 85, Volleys: 80, Passing: 91, Vision: 93, Dribbling: 93, "Ball Control": 94, Composure: 93, Defending: 48, Heading: 65, Athleticism: 85, "Soccer IQ": 95, Strength: 76, Stamina: 91 },
-        "Santiago Solari": { Pace: 81, Finishing: 76, "Shot Power": 79, "Long Shots": 77, Volleys: 72, Passing: 82, Vision: 83, Dribbling: 85, "Ball Control": 86, Composure: 84, Defending: 55, Heading: 62, Athleticism: 82, "Soccer IQ": 87, Strength: 70, Stamina: 86 },
-        "Claude Makélélé": { Pace: 79, Finishing: 55, "Shot Power": 72, "Long Shots": 68, Volleys: 55, Passing: 82, Vision: 80, Dribbling: 79, "Ball Control": 83, Composure: 91, Defending: 94, Heading: 68, Athleticism: 86, "Soccer IQ": 97, Strength: 83, Stamina: 98 },
-        "Fernando Hierro": { Pace: 66, Finishing: 75, "Shot Power": 86, "Long Shots": 85, Volleys: 74, Passing: 81, Vision: 79, Dribbling: 74, "Ball Control": 80, Composure: 92, Defending: 91, Heading: 92, Athleticism: 74, "Soccer IQ": 94, Strength: 85, Stamina: 86 },
-        "Iván Helguera": { Pace: 72, Finishing: 65, "Shot Power": 74, "Long Shots": 70, Volleys: 60, Passing: 78, Vision: 76, Dribbling: 74, "Ball Control": 78, Composure: 86, Defending: 88, Heading: 86, Athleticism: 78, "Soccer IQ": 89, Strength: 80, Stamina: 88 },
-        "Roberto Carlos": { Pace: 92, Finishing: 78, "Shot Power": 98, "Long Shots": 96, Volleys: 85, Passing: 83, Vision: 82, Dribbling: 84, "Ball Control": 86, Composure: 86, Defending: 81, Heading: 62, Athleticism: 92, "Soccer IQ": 87, Strength: 85, Stamina: 96 },
-        "Michel Salgado": { Pace: 83, Finishing: 52, "Shot Power": 72, "Long Shots": 65, Volleys: 50, Passing: 75, Vision: 74, Dribbling: 78, "Ball Control": 80, Composure: 85, Defending: 86, Heading: 70, Athleticism: 84, "Soccer IQ": 88, Strength: 82, Stamina: 94 },
-        "Didier Drogba": { Pace: 84, Finishing: 92, "Shot Power": 94, "Long Shots": 88, Volleys: 89, Passing: 76, Vision: 78, Dribbling: 83, "Ball Control": 86, Composure: 91, Defending: 40, Heading: 95, Athleticism: 91, "Soccer IQ": 90, Strength: 95, Stamina: 89 },
-        "Eiður Guðjohnsen": { Pace: 78, Finishing: 85, "Shot Power": 82, "Long Shots": 80, Volleys: 83, Passing: 83, Vision: 85, Dribbling: 85, "Ball Control": 88, Composure: 88, Defending: 45, Heading: 76, Athleticism: 78, "Soccer IQ": 91, Strength: 76, Stamina: 85 },
-        "Damien Duff": { Pace: 89, Finishing: 79, "Shot Power": 78, "Long Shots": 76, Volleys: 74, Passing: 82, Vision: 84, Dribbling: 89, "Ball Control": 90, Composure: 86, Defending: 50, Heading: 55, Athleticism: 86, "Soccer IQ": 88, Strength: 68, Stamina: 90 },
-        "Frank Lampard": { Pace: 72, Finishing: 90, "Shot Power": 92, "Long Shots": 94, Volleys: 86, Passing: 89, Vision: 91, Dribbling: 82, "Ball Control": 87, Composure: 95, Defending: 76, Heading: 80, Athleticism: 80, "Soccer IQ": 98, Strength: 78, Stamina: 97 },
-        "John Terry": { Pace: 64, Finishing: 62, "Shot Power": 74, "Long Shots": 65, Volleys: 58, Passing: 76, Vision: 74, Dribbling: 70, "Ball Control": 76, Composure: 93, Defending: 94, Heading: 96, Athleticism: 76, "Soccer IQ": 96, Strength: 92, Stamina: 88 },
-        "Ricardo Carvalho": { Pace: 76, Finishing: 48, "Shot Power": 62, "Long Shots": 52, Volleys: 45, Passing: 74, Vision: 72, Dribbling: 73, "Ball Control": 78, Composure: 89, Defending: 92, Heading: 86, Athleticism: 80, "Soccer IQ": 93, Strength: 82, Stamina: 86 },
-        "William Gallas": { Pace: 81, Finishing: 58, "Shot Power": 68, "Long Shots": 60, Volleys: 52, Passing: 75, Vision: 73, Dribbling: 76, "Ball Control": 79, Composure: 84, Defending: 88, Heading: 84, Athleticism: 84, "Soccer IQ": 87, Strength: 84, Stamina: 90 },
-        "Paulo Ferreira": { Pace: 78, Finishing: 48, "Shot Power": 62, "Long Shots": 55, Volleys: 45, Passing: 76, Vision: 74, Dribbling: 75, "Ball Control": 78, Composure: 85, Defending: 84, Heading: 72, Athleticism: 79, "Soccer IQ": 88, Strength: 74, Stamina: 89 },
-        "Petr Čech": { Pace: 55, Finishing: 30, "Shot Power": 50, "Long Shots": 35, Volleys: 30, Passing: 75, Vision: 73, Dribbling: 50, "Ball Control": 60, Composure: 93, Defending: 40, Heading: 50, Athleticism: 88, "Soccer IQ": 94, Strength: 84, Stamina: 85 },
-        "Lamine Yamal": { Pace: 89, Finishing: 82, "Shot Power": 78, "Long Shots": 81, Volleys: 75, Passing: 85, Vision: 87, Dribbling: 92, "Ball Control": 92, Composure: 88, Defending: 38, Heading: 50, Athleticism: 83, "Soccer IQ": 89, Strength: 60, Stamina: 85 },
-        "Raphinha": { Pace: 91, Finishing: 84, "Shot Power": 83, "Long Shots": 85, Volleys: 78, Passing: 84, Vision: 85, Dribbling: 89, "Ball Control": 90, Composure: 86, Defending: 52, Heading: 62, Athleticism: 87, "Soccer IQ": 87, Strength: 68, Stamina: 92 },
-        "Pedri": { Pace: 78, Finishing: 78, "Shot Power": 74, "Long Shots": 78, Volleys: 72, Passing: 90, Vision: 93, Dribbling: 91, "Ball Control": 93, Composure: 92, Defending: 72, Heading: 55, Athleticism: 78, "Soccer IQ": 95, Strength: 58, Stamina: 92 },
-        "Frenkie de Jong": { Pace: 83, Finishing: 75, "Shot Power": 76, "Long Shots": 75, Volleys: 68, Passing: 88, Vision: 89, Dribbling: 91, "Ball Control": 92, Composure: 91, Defending: 80, Heading: 70, Athleticism: 84, "Soccer IQ": 92, Strength: 76, Stamina: 94 },
-        "Dani Olmo": { Pace: 80, Finishing: 83, "Shot Power": 82, "Long Shots": 84, Volleys: 80, Passing: 86, Vision: 89, Dribbling: 88, "Ball Control": 90, Composure: 89, Defending: 55, Heading: 65, Athleticism: 80, "Soccer IQ": 90, Strength: 70, Stamina: 88 },
-        "Ronald Araújo": { Pace: 84, Finishing: 50, "Shot Power": 68, "Long Shots": 55, Volleys: 48, Passing: 72, Vision: 70, Dribbling: 72, "Ball Control": 76, Composure: 82, Defending: 88, Heading: 91, Athleticism: 90, "Soccer IQ": 85, Strength: 92, Stamina: 86 },
-        "Pau Cubarsí": { Pace: 72, Finishing: 45, "Shot Power": 60, "Long Shots": 52, Volleys: 42, Passing: 84, Vision: 85, Dribbling: 75, "Ball Control": 80, Composure: 89, Defending: 85, Heading: 82, Athleticism: 75, "Soccer IQ": 91, Strength: 75, Stamina: 84 },
-        "Alejandro Balde": { Pace: 94, Finishing: 62, "Shot Power": 70, "Long Shots": 65, Volleys: 58, Passing: 78, Vision: 76, Dribbling: 84, "Ball Control": 85, Composure: 80, Defending: 78, Heading: 58, Athleticism: 91, "Soccer IQ": 82, Strength: 68, Stamina: 93 },
-        "Jules Koundé": { Pace: 85, Finishing: 55, "Shot Power": 70, "Long Shots": 62, Volleys: 52, Passing: 79, Vision: 77, Dribbling: 78, "Ball Control": 82, Composure: 85, Defending: 87, Heading: 84, Athleticism: 85, "Soccer IQ": 88, Strength: 82, Stamina: 90 },
-        "Kylian Mbappé": { Pace: 97, Finishing: 94, "Shot Power": 92, "Long Shots": 88, Volleys: 87, Passing: 83, Vision: 85, Dribbling: 93, "Ball Control": 92, Composure: 92, Defending: 36, Heading: 78, Athleticism: 93, "Soccer IQ": 91, Strength: 78, Stamina: 90 },
-        "Vinícius Júnior": { Pace: 95, Finishing: 89, "Shot Power": 85, "Long Shots": 82, Volleys: 80, Passing: 84, Vision: 87, Dribbling: 95, "Ball Control": 94, Composure: 88, Defending: 32, Heading: 58, Athleticism: 91, "Soccer IQ": 88, Strength: 68, Stamina: 92 },
-        "Rodrygo": { Pace: 90, Finishing: 85, "Shot Power": 83, "Long Shots": 84, Volleys: 78, Passing: 83, Vision: 85, Dribbling: 90, "Ball Control": 91, Composure: 87, Defending: 40, Heading: 60, Athleticism: 85, "Soccer IQ": 88, Strength: 64, Stamina: 88 },
-        "Jude Bellingham": { Pace: 82, Finishing: 88, "Shot Power": 85, "Long Shots": 86, Volleys: 80, Passing: 86, Vision: 89, Dribbling: 90, "Ball Control": 91, Composure: 93, Defending: 78, Heading: 85, Athleticism: 88, "Soccer IQ": 94, Strength: 84, Stamina: 95 },
-        "Federico Valverde": { Pace: 90, Finishing: 84, "Shot Power": 93, "Long Shots": 92, Volleys: 82, Passing: 86, Vision: 85, Dribbling: 85, "Ball Control": 88, Composure: 88, Defending: 82, Heading: 76, Athleticism: 92, "Soccer IQ": 90, Strength: 83, Stamina: 97 },
-        "Aurélien Tchouaméni": { Pace: 77, Finishing: 70, "Shot Power": 82, "Long Shots": 78, Volleys: 68, Passing: 83, Vision: 82, Dribbling: 79, "Ball Control": 83, Composure: 89, Defending: 88, Heading: 86, Athleticism: 84, "Soccer IQ": 90, Strength: 88, Stamina: 90 },
-        "Antonio Rüdiger": { Pace: 82, Finishing: 50, "Shot Power": 74, "Long Shots": 65, Volleys: 50, Passing: 75, Vision: 73, Dribbling: 75, "Ball Control": 79, Composure: 86, Defending: 90, Heading: 90, Athleticism: 88, "Soccer IQ": 88, Strength: 94, Stamina: 89 },
-        "Éder Militão": { Pace: 84, Finishing: 55, "Shot Power": 72, "Long Shots": 64, Volleys: 52, Passing: 77, Vision: 75, Dribbling: 77, "Ball Control": 81, Composure: 85, Defending: 89, Heading: 88, Athleticism: 87, "Soccer IQ": 87, Strength: 87, Stamina: 88 },
-        "Ferland Mendy": { Pace: 91, Finishing: 60, "Shot Power": 72, "Long Shots": 68, Volleys: 55, Passing: 77, Vision: 75, Dribbling: 81, "Ball Control": 83, Composure: 82, Defending: 83, Heading: 70, Athleticism: 90, "Soccer IQ": 83, Strength: 78, Stamina: 92 },
-        "Thibaut Courtois": { Pace: 50, Finishing: 30, "Shot Power": 48, "Long Shots": 32, Volleys: 30, Passing: 75, Vision: 73, Dribbling: 50, "Ball Control": 58, Composure: 92, Defending: 40, Heading: 50, Athleticism: 86, "Soccer IQ": 93, Strength: 85, Stamina: 82 },
-        "Antoine Griezmann": { Pace: 80, Finishing: 89, "Shot Power": 86, "Long Shots": 87, Volleys: 85, Passing: 87, Vision: 90, Dribbling: 88, "Ball Control": 90, Composure: 92, Defending: 65, Heading: 75, Athleticism: 82, "Soccer IQ": 95, Strength: 68, Stamina: 92 },
-        "Julián Álvarez": { Pace: 85, Finishing: 87, "Shot Power": 86, "Long Shots": 84, Volleys: 82, Passing: 82, Vision: 84, Dribbling: 87, "Ball Control": 88, Composure: 88, Defending: 55, Heading: 72, Athleticism: 84, "Soccer IQ": 90, Strength: 74, Stamina: 94 },
-        "Alexander Sørloth": { Pace: 79, Finishing: 86, "Shot Power": 87, "Long Shots": 80, Volleys: 82, Passing: 72, Vision: 74, Dribbling: 78, "Ball Control": 81, Composure: 84, Defending: 38, Heading: 90, Athleticism: 82, "Soccer IQ": 86, Strength: 91, Stamina: 85 },
-        "Rodrigo De Paul": { Pace: 77, Finishing: 76, "Shot Power": 82, "Long Shots": 80, Volleys: 74, Passing: 85, Vision: 86, Dribbling: 84, "Ball Control": 86, Composure: 88, Defending: 80, Heading: 65, Athleticism: 83, "Soccer IQ": 89, Strength: 78, Stamina: 95 },
-        "Koke": { Pace: 68, Finishing: 74, "Shot Power": 78, "Long Shots": 80, Volleys: 72, Passing: 87, Vision: 89, Dribbling: 82, "Ball Control": 86, Composure: 92, Defending: 81, Heading: 68, Athleticism: 78, "Soccer IQ": 96, Strength: 72, Stamina: 95 },
-        "Conor Gallagher": { Pace: 78, Finishing: 76, "Shot Power": 80, "Long Shots": 78, Volleys: 72, Passing: 81, Vision: 80, Dribbling: 81, "Ball Control": 83, Composure: 84, Defending: 81, Heading: 72, Athleticism: 85, "Soccer IQ": 88, Strength: 79, Stamina: 98 },
-        "José María Giménez": { Pace: 73, Finishing: 50, "Shot Power": 68, "Long Shots": 58, Volleys: 48, Passing: 71, Vision: 69, Dribbling: 70, "Ball Control": 75, Composure: 84, Defending: 89, Heading: 90, Athleticism: 83, "Soccer IQ": 88, Strength: 89, Stamina: 86 },
-        "Robin Le Normand": { Pace: 72, Finishing: 45, "Shot Power": 62, "Long Shots": 52, Volleys: 42, Passing: 74, Vision: 72, Dribbling: 72, "Ball Control": 77, Composure: 84, Defending: 86, Heading: 87, Athleticism: 78, "Soccer IQ": 87, Strength: 85, Stamina: 87 },
-        "Reinildo Mandava": { Pace: 83, Finishing: 42, "Shot Power": 60, "Long Shots": 48, Volleys: 40, Passing: 70, Vision: 68, Dribbling: 73, "Ball Control": 76, Composure: 81, Defending: 86, Heading: 78, Athleticism: 84, "Soccer IQ": 85, Strength: 82, Stamina: 90 },
-        "Nahuel Molina": { Pace: 85, Finishing: 68, "Shot Power": 75, "Long Shots": 72, Volleys: 65, Passing: 79, Vision: 78, Dribbling: 81, "Ball Control": 82, Composure: 83, Defending: 81, Heading: 68, Athleticism: 86, "Soccer IQ": 85, Strength: 72, Stamina: 94 },
-        "Jan Oblak": { Pace: 50, Finishing: 30, "Shot Power": 48, "Long Shots": 32, Volleys: 30, Passing: 74, Vision: 72, Dribbling: 50, "Ball Control": 58, Composure: 94, Defending: 40, Heading: 50, Athleticism: 86, "Soccer IQ": 95, Strength: 82, Stamina: 85 },
-        "Erling Haaland": { Pace: 89, Finishing: 95, "Shot Power": 94, "Long Shots": 87, Volleys: 88, Passing: 78, Vision: 80, Dribbling: 82, "Ball Control": 85, Composure: 90, Defending: 45, Heading: 94, Athleticism: 92, "Soccer IQ": 91, Strength: 96, Stamina: 89 },
-        "Phil Foden": { Pace: 88, Finishing: 87, "Shot Power": 85, "Long Shots": 86, Volleys: 82, Passing: 89, Vision: 91, Dribbling: 92, "Ball Control": 93, Composure: 90, Defending: 58, Heading: 62, Athleticism: 84, "Soccer IQ": 93, Strength: 65, Stamina: 89 },
-        "Savinho": { Pace: 90, Finishing: 79, "Shot Power": 78, "Long Shots": 76, Volleys: 72, Passing: 83, Vision: 85, Dribbling: 91, "Ball Control": 91, Composure: 84, Defending: 45, Heading: 50, Athleticism: 86, "Soccer IQ": 86, Strength: 60, Stamina: 87 },
-        "Kevin De Bruyne": { Pace: 74, Finishing: 87, "Shot Power": 92, "Long Shots": 93, Volleys: 86, Passing: 96, Vision: 98, Dribbling: 87, "Ball Control": 92, Composure: 94, Defending: 65, Heading: 72, Athleticism: 78, "Soccer IQ": 99, Strength: 78, Stamina: 88 },
-        "Bernardo Silva": { Pace: 77, Finishing: 82, "Shot Power": 79, "Long Shots": 82, Volleys: 76, Passing: 89, Vision: 92, Dribbling: 93, "Ball Control": 94, Composure: 94, Defending: 72, Heading: 60, Athleticism: 82, "Soccer IQ": 96, Strength: 62, Stamina: 97 },
-        "Rodri": { Pace: 65, Finishing: 80, "Shot Power": 84, "Long Shots": 86, Volleys: 78, Passing: 91, Vision: 92, Dribbling: 84, "Ball Control": 90, Composure: 96, Defending: 88, Heading: 85, Athleticism: 78, "Soccer IQ": 98, Strength: 89, Stamina: 94 },
-        "Rúben Dias": { Pace: 70, Finishing: 52, "Shot Power": 70, "Long Shots": 60, Volleys: 48, Passing: 79, Vision: 77, Dribbling: 74, "Ball Control": 79, Composure: 92, Defending: 92, Heading: 90, Athleticism: 82, "Soccer IQ": 93, Strength: 91, Stamina: 88 },
-        "John Stones": { Pace: 75, Finishing: 65, "Shot Power": 74, "Long Shots": 72, Volleys: 60, Passing: 86, Vision: 85, Dribbling: 83, "Ball Control": 87, Composure: 92, Defending: 87, Heading: 80, Athleticism: 78, "Soccer IQ": 92, Strength: 80, Stamina: 86 },
-        "Josko Gvardiol": { Pace: 81, Finishing: 68, "Shot Power": 80, "Long Shots": 78, Volleys: 65, Passing: 82, Vision: 81, Dribbling: 83, "Ball Control": 85, Composure: 89, Defending: 88, Heading: 86, Athleticism: 84, "Soccer IQ": 90, Strength: 87, Stamina: 90 },
-        "Kyle Walker": { Pace: 93, Finishing: 60, "Shot Power": 78, "Long Shots": 72, Volleys: 55, Passing: 77, Vision: 75, Dribbling: 78, "Ball Control": 81, Composure: 83, Defending: 84, Heading: 72, Athleticism: 93, "Soccer IQ": 86, Strength: 88, Stamina: 92 },
-        "Ederson": { Pace: 63, Finishing: 40, "Shot Power": 65, "Long Shots": 55, Volleys: 38, Passing: 91, Vision: 89, Dribbling: 68, "Ball Control": 76, Composure: 93, Defending: 45, Heading: 50, Athleticism: 88, "Soccer IQ": 92, Strength: 84, Stamina: 86 }
+        "Andrew Robertson": { Pace: 85, Finishing: 65, "Shot Power": 76, "Long Shots": 70, Volleys: 64, Passing: 82, Vision: 81, Dribbling: 85, "Ball Control": 86, Composure: 87, Defending: 86, Heading: 68, Athleticism: 86, "Soccer IQ": 90, Strength: 72, Stamina: 95 }
     };
 
-    function generate18PlayerRoster(starters, bench, reserves) {
-        let fullRoster = [];
-        let allNames = [...starters, ...bench, ...reserves];
-        allNames.forEach((item, index) => {
-            let cleanName = item.replace(/\s*\([^)]*\)/g, '').trim();
-            let baseRatings = predeterminedStatsDatabase[cleanName];
-
-            if (!baseRatings) {
-                let base = index < 11 ? 85 : (index < 15 ? 80 : 76);
-                baseRatings = {
-                    Pace: base + Math.floor(Math.random() * 12),
-                    Finishing: base + Math.floor(Math.random() * 14),
-                    "Shot Power": base + Math.floor(Math.random() * 10),
-                    "Long Shots": base + Math.floor(Math.random() * 12),
-                    Volleys: base + Math.floor(Math.random() * 10),
-                    Passing: base + Math.floor(Math.random() * 14),
-                    Vision: base + Math.floor(Math.random() * 13),
-                    Dribbling: base + Math.floor(Math.random() * 15),
-                    "Ball Control": base + Math.floor(Math.random() * 14),
-                    Composure: base + Math.floor(Math.random() * 12),
-                    Defending: base - 10 + Math.floor(Math.random() * 25),
-                    Heading: base - 5 + Math.floor(Math.random() * 20),
-                    Athleticism: base + Math.floor(Math.random() * 12),
-                    "Soccer IQ": base + Math.floor(Math.random() * 10),
-                    Strength: base - 8 + Math.floor(Math.random() * 22),
-                    Stamina: base + Math.floor(Math.random() * 14)
-                };
-            }
-
-            fullRoster.push({
-                name: item,
-                used: false,
-                ratings: { ...baseRatings }
-            });
-        });
-        return fullRoster;
-    }
-
-    const teamsDatabase = [
-        { 
-            team: "2014-15 Barcelona", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Lionel Messi (RW)", "Neymar Jr (LW)", "Luis Suárez (ST)", "Andrés Iniesta (CM)", "Xavi Hernández (CM)", "Sergio Busquets (CDM)", "Gerard Piqué (CB)", "Javier Mascherano (CB)", "Dani Alves (RB)", "Jordi Alba (LB)", "Marc-André ter Stegen (GK)"],
-                ["Ivan Rakitic (CM)", "Pedro (LW)", "Claudio Bravo (GK)", "Marc Bartra (CB)", "Adriano (LB)"],
-                ["Rafinha (CM)", "Munir El Haddadi (ST)"]
-            )
-        },
-        { 
-            team: "2008-09 Barcelona", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Lionel Messi (RW)", "Thierry Henry (LW)", "Samuel Eto'o (ST)", "Xavi Hernández (CM)", "Andrés Iniesta (CM)", "Yaya Touré (CDM)", "Carles Puyol (CB)", "Gerard Piqué (CB)", "Dani Alves (RB)", "Eric Abidal (LB)", "Víctor Valdés (GK)"],
-                ["Sergio Busquets (CDM)", "Bojan Krkić (ST)", "Seydou Keita (CM)", "Gabriel Milito (CB)", "Sylvinho (LB)"],
-                ["Martín Cáceres (CB)", "Albert Jorquera (GK)"]
-            )
-        },
-        { 
-            team: "2011-12 Real Madrid", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gonzalo Higuaín (ST)", "Mesut Özil (CAM)", "Xabi Alonso (CDM)", "Sami Khedira (CM)", "Sergio Ramos (CB)", "Pepe (CB)", "Álvaro Arbeloa (RB)", "Marcelo (LB)", "Iker Casillas (GK)"],
-                ["Kaká (CAM)", "Ángel Di María (RW)", "José Callejón (RW)", "Raphaël Varane (CB)", "Fabio Coentrão (LB)"],
-                ["Esteban Granero (CM)", "Antonio Adán (GK)"]
-            )
-        },
-        { 
-            team: "2016-17 Real Madrid", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gareth Bale (RW)", "Luka Modrić (CM)", "Toni Kroos (CM)", "Casemiro (CDM)", "Sergio Ramos (CB)", "Pepe (CB)", "Dani Carvajal (RB)", "Marcelo (LB)", "Keylor Navas (GK)"],
-                ["Isco (CAM)", "James Rodríguez (CAM)", "Marco Asensio (LW)", "Álvaro Morata (ST)", "Mateo Kovačić (CM)"],
-                ["Danilo (RB)", "Raphaël Varane (CB)"]
-            )
-        },
-        { 
-            team: "1998-99 Manchester United", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Dwight Yorke (ST)", "Andy Cole (ST)", "Ryan Giggs (LM)", "David Beckham (RM)", "Roy Keane (CM)", "Paul Scholes (CM)", "Jaap Stam (CB)", "Ronny Johnsen (CB)", "Denis Irwin (LB)", "Gary Neville (RB)", "Peter Schmeichel (GK)"],
-                ["Ole Gunnar Solskjær (ST)", "Teddy Sheringham (ST)", "Nicky Butt (CM)", "Jesper Blomqvist (LM)", "Wes Brown (CB)"],
-                ["Phil Neville (LB)", "Raimond van der Gouw (GK)"]
-            )
-        },
-        { 
-            team: "2007-08 Manchester United", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Cristiano Ronaldo (LW)", "Wayne Rooney (ST)", "Carlos Tevez (ST)", "Paul Scholes (CM)", "Michael Carrick (CM)", "Owen Hargreaves (CDM)", "Rio Ferdinand (CB)", "Nemanja Vidić (CB)", "Patrice Evra (LB)", "Wes Brown (RB)", "Edwin van der Sar (GK)"],
-                ["Nani (RW)", "Park Ji-sung (LM)", "Anderson (CM)", "John O'Shea (RB)", "Gerard Piqué (CB)"],
-                ["Louis Saha (ST)", "Tomasz Kuszczak (GK)"]
-            )
-        },
-        { 
-            team: "2003-04 Arsenal Invincibles", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Thierry Henry (ST)", "Dennis Bergkamp (CF)", "Robert Pires (LM)", "Freddie Ljungberg (RM)", "Patrick Vieira (CM)", "Gilberto Silva (CDM)", "Sol Campbell (CB)", "Kolo Touré (CB)", "Ashley Cole (LB)", "Lauren (RB)", "Jens Lehmann (GK)"],
-                ["Sylvain Wiltord (ST)", "José Antonio Reyes (LW)", "Edu (CM)", "Ray Parlour (RM)", "Martin Keown (CB)"],
-                ["Pascal Cygan (CB)", "Stuart Taylor (GK)"]
-            )
-        },
-        { 
-            team: "2019-20 Liverpool", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Mohamed Salah (RW)", "Sadio Mané (LW)", "Roberto Firmino (CF)", "Jordan Henderson (CM)", "Fabinho (CDM)", "Georginio Wijnaldum (CM)", "Virgil van Dijk (CB)", "Joe Gomez (CB)", "Andrew Robertson (LB)", "Trent Alexander-Arnold (RB)", "Alisson Becker (GK)"],
-                ["Divock Origi (ST)", "Alex Oxlade-Chamberlain (CM)", "James Milner (CM)", "Naby Keïta (CM)", "Joel Matip (CB)"],
-                ["Dejan Lovren (CB)", "Adrián (GK)"]
-            )
-        },
-        { 
-            team: "2012-13 Bayern Munich", type: "classic", league: "Bundesliga", 
-            players: generate18PlayerRoster(
-                ["Mario Mandžukić (ST)", "Franck Ribéry (LM)", "Arjen Robben (RM)", "Thomas Müller (CAM)", "Bastian Schweinsteiger (CM)", "Javi Martínez (CDM)", "Jérôme Boateng (CB)", "Dante (CB)", "David Alaba (LB)", "Philipp Lahm (RB)", "Manuel Neuer (GK)"],
-                ["Claudio Pizarro (ST)", "Mario Götze (CAM)", "Xherdan Shaqiri (RW)", "Luiz Gustavo (CDM)", "Anatoliy Tymoshchuk (CDM)"],
-                ["Daniel Van Buyten (CB)", "Tom Starke (GK)"]
-            )
-        },
-        { 
-            team: "2019-20 Bayern Munich", type: "classic", league: "Bundesliga", 
-            players: generate18PlayerRoster(
-                ["Robert Lewandowski (ST)", "Serge Gnabry (RW)", "Kingsley Coman (LW)", "Thomas Müller (CAM)", "Leon Goretzka (CM)", "Thiago Alcântara (CM)", "David Alaba (CB)", "Jérôme Boateng (CB)", "Alphonso Davies (LB)", "Benjamin Pavard (RB)", "Manuel Neuer (GK)"],
-                ["Ivan Perišić (LW)", "Philippe Coutinho (CAM)", "Joshua Kimmich (RB)", "Corentin Tolisso (CM)", "Javi Martínez (CDM)"],
-                ["Lucas Hernández (CB)", "Sven Ulreich (GK)"]
-            )
-        },
-        { 
-            team: "2009-10 Inter Milan", type: "classic", league: "Serie A", 
-            players: generate18PlayerRoster(
-                ["Samuel Eto'o (ST)", "Diego Milito (ST)", "Goran Pandev (LW)", "Wesley Sneijder (CAM)", "Esteban Cambiasso (CM)", "Javier Zanetti (CDM)", "Walter Samuel (CB)", "Lúcio (CB)", "Cristian Chivu (LB)", "Maicon (RB)", "Julio César (GK)"],
-                ["Mario Balotelli (ST)", "Dejan Stanković (CM)", "Thiago Motta (CM)", "Marco Materazzi (CB)", "Ivan Cordoba (CB)"],
-                ["Sulley Muntari (CM)", "Francesco Toldo (GK)"]
-            )
-        },
-        { 
-            team: "2006-07 AC Milan", type: "classic", league: "Serie A", 
-            players: generate18PlayerRoster(
-                ["Filippo Inzaghi (ST)", "Alberto Gilardino (ST)", "Kaká (CAM)", "Clarence Seedorf (CM)", "Andrea Pirlo (CDM)", "Gennaro Gattuso (CM)", "Paolo Maldini (CB)", "Alessandro Nesta (CB)", "Marek Jankulovski (LB)", "Cafu (RB)", "Dida (GK)"],
-                ["Ricardo Oliveira (ST)", "Massimo Ambrosini (CM)", "Christian Brocchi (CM)", "Daniele Bonera (CB)", "Kakhaber Kaladze (CB)"],
-                ["Serginho (LM)", "Željko Kalac (GK)"]
-            )
-        },
-        { 
-            team: "2016-17 Juventus", type: "classic", league: "Serie A", 
-            players: generate18PlayerRoster(
-                ["Gonzalo Higuaín (ST)", "Paulo Dybala (CF)", "Mario Mandžukić (LW)", "Juan Cuadrado (RW)", "Miralem Pjanić (CM)", "Sami Khedira (CM)", "Giorgio Chiellini (CB)", "Leonardo Bonucci (CB)", "Alex Sandro (LB)", "Dani Alves (RB)", "Gianluigi Buffon (GK)"],
-                ["Claudio Marchisio (CM)", "Mario Lemina (CM)", "Marko Pjaca (LW)", "Medhi Benatia (CB)", "Andrea Barzagli (CB)"],
-                ["Stephan Lichtsteiner (RB)", "Neto (GK)"]
-            )
-        },
-        { 
-            team: "2001-02 Real Madrid", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Raúl (ST)", "Fernando Morientes (ST)", "Zinedine Zidane (CAM)", "Luís Figo (RW)", "Santiago Solari (LM)", "Claude Makélélé (CDM)", "Fernando Hierro (CB)", "Iván Helguera (CB)", "Roberto Carlos (LB)", "Michel Salgado (RB)", "César Sánchez (GK)"],
-                ["Guti (CAM)", "Steve McManaman (RW)", "Flavio Conceição (CM)", "Francisco Pavón (CB)", "Albert Celades (CM)"],
-                ["Portillo (ST)", "Iker Casillas (GK)"]
-            )
-        },
-        { 
-            team: "2004-05 Chelsea", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Didier Drogba (ST)", "Eiður Guðjohnsen (ST)", "Arjen Robben (RW)", "Damien Duff (LW)", "Frank Lampard (CAM)", "Claude Makélélé (CDM)", "John Terry (CB)", "Ricardo Carvalho (CB)", "William Gallas (LB)", "Paulo Ferreira (RB)", "Petr Čech (GK)"],
-                ["Mateja Kežman (ST)", "Joe Cole (RW)", "Tiago Mendes (CM)", "Geremi (RB)", "Wayne Bridge (LB)"],
-                ["Robert Huth (CB)", "Carlo Cudicini (GK)"]
-            )
-        },
-        { 
-            team: "Barcelona (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Robert Lewandowski (ST)", "Lamine Yamal (RW)", "Raphinha (LW)", "Pedri (CM)", "Frenkie de Jong (CM)", "Dani Olmo (CAM)", "Ronald Araújo (CB)", "Pau Cubarsí (CB)", "Alejandro Balde (LB)", "Jules Koundé (RB)", "Marc-André ter Stegen (GK)"],
-                ["Ferran Torres (LW)", "Ansu Fati (LW)", "Gavi (CM)", "Fermin Lopez (CAM)", "Andreas Christensen (CB)"],
-                ["Eric Garcia (CB)", "Wojciech Szczęsny (GK)"]
-            )
-        },
-        { 
-            team: "Real Madrid (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Kylian Mbappé (ST)", "Vinícius Júnior (LW)", "Rodrygo (RW)", "Jude Bellingham (CAM)", "Federico Valverde (CM)", "Aurélien Tchouaméni (CDM)", "Antonio Rüdiger (CB)", "Éder Militão (CB)", "Ferland Mendy (LB)", "Dani Carvajal (RB)", "Thibaut Courtois (GK)"],
-                ["Endrick (ST)", "Brahim Díaz (RW)", "Arda Güler (CAM)", "Eduardo Camavinga (CM)", "Dean Huijsen (CB)"],
-                ["Trent Alexander-Arnold (RB)", "Andriy Lunin (GK)"]
-            )
-        },
-        { 
-            team: "Atletico Madrid (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Antoine Griezmann (ST)", "Julián Álvarez (ST)", "Alexander Sørloth (ST)", "Rodrigo De Paul (CM)", "Koke (CM)", "Conor Gallagher (CM)", "José María Giménez (CB)", "Robin Le Normand (CB)", "Reinildo Mandava (LB)", "Nahuel Molina (RB)", "Jan Oblak (GK)"],
-                ["Ángel Correa (RW)", "Samuel Lino (LW)", "Pablo Barrios (CM)", "Axel Witsel (CB)", "César Azpilicueta (RB)"],
-                ["Thomas Lemar (CM)", "Juan Musso (GK)"]
-            )
-        },
-        { 
-            team: "Man City (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Erling Haaland (ST)", "Phil Foden (LW)", "Savinho (RW)", "Kevin De Bruyne (CM)", "Bernardo Silva (CM)", "Rodri (CDM)", "Rúben Dias (CB)", "John Stones (CB)", "Josko Gvardiol (LB)", "Kyle Walker (RB)", "Ederson (GK)"],
-                ["Jack Grealish (LW)", "Jeremy Doku (RW)", "Mateo Kovačić (CM)", "Ilkay Gündoğan (CM)", "Nathan Aké (CB)"],
-                ["Manuel Akanji (CB)", "Stefan Ortega (GK)"]
-            )
-        }
+    const squadsData = [
+        { type: "classic", name: "2009-11 FC Barcelona", players: ["Lionel Messi", "Andrés Iniesta", "Xavi Hernández", "Sergio Busquets", "Gerard Piqué", "Javier Mascherano", "Dani Alves", "Jordi Alba", "Marc-André ter Stegen", "Carles Puyol", "Eric Abidal", "Víctor Valdés", "Thierry Henry", "Samuel Eto'o", "Yaya Touré"] },
+        { type: "classic", name: "2016-18 Real Madrid", players: ["Cristiano Ronaldo", "Karim Benzema", "Gareth Bale", "Luka Modrić", "Toni Kroos", "Casemiro", "Sergio Ramos", "Pepe", "Marcelo", "Dani Carvajal", "Keylor Navas", "Álvaro Arbeloa", "Mesut Özil", "Xabi Alonso", "Sami Khedira"] },
+        { type: "classic", name: "1998-99 Manchester United", players: ["Dwight Yorke", "Andy Cole", "Ryan Giggs", "David Beckham", "Roy Keane", "Paul Scholes", "Jaap Stam", "Ronny Johnsen", "Denis Irwin", "Gary Neville", "Peter Schmeichel"] },
+        { type: "classic", name: "2007-09 Manchester United", players: ["Wayne Rooney", "Carlos Tevez", "Michael Carrick", "Rio Ferdinand", "Nemanja Vidić", "Patrice Evra", "Edwin van der Sar", "Ryan Giggs", "Paul Scholes", "Gary Neville", "Cristiano Ronaldo"] },
+        { type: "classic", name: "2003-04 Arsenal Invincibles", players: ["Dennis Bergkamp", "Thierry Henry", "Robert Pires", "Freddie Ljungberg", "Patrick Vieira", "Gilberto Silva", "Sol Campbell", "Kolo Touré", "Ashley Cole", "Lauren", "Jens Lehmann"] },
+        { type: "classic", name: "2018-20 Liverpool", players: ["Mohamed Salah", "Sadio Mané", "Roberto Firmino", "Jordan Henderson", "Fabinho", "Georginio Wijnaldum", "Virgil van Dijk", "Joe Gomez", "Andrew Robertson"] }
     ];
 
     function selectPosition(pos, event) {
         selectedPosition = pos;
-        document.querySelectorAll('#step-position .option-card').forEach(card => card.classList.remove('selected'));
+        document.querySelectorAll('#step-position .option-card').forEach(c => c.classList.remove('selected'));
         event.currentTarget.classList.add('selected');
         
         setTimeout(() => {
             document.getElementById('step-position').classList.add('hidden');
             document.getElementById('step-draft').classList.remove('hidden');
-            initDraftBoard();
+            renderAttributeProgress();
             triggerTeamSpin();
         }, 300);
     }
 
-    function initDraftBoard() {
+    function renderAttributeProgress() {
         const container = document.getElementById('attribute-progress-list');
         container.innerHTML = '';
         attributesList.forEach(attr => {
+            const data = playerAttributes[attr];
             const div = document.createElement('div');
-            div.className = 'attribute-item';
-            div.id = `attr-item-${attr}`;
-            div.innerHTML = `<span>${attr}</span><span id="val-${attr}">--</span>`;
-            div.onclick = () => setTargetAttribute(attr);
+            div.className = `attribute-item ${data.locked ? 'locked' : ''}`;
+            if(!data.locked && selectedAttributeTarget === attr) {
+                div.style.borderColor = 'var(--accent-gold)';
+                div.style.background = 'rgba(251, 191, 36, 0.1)';
+            }
+            div.innerHTML = `<span>${attr}</span> <span>${data.locked ? data.val + ' (' + data.source + ')' : (selectedAttributeTarget === attr ? 'TARGETING' : 'Click to Target')}</span>`;
+            
+            if(!data.locked) {
+                div.onclick = () => setTargetAttribute(attr);
+            }
             container.appendChild(div);
         });
-        updateDraftProgressUI();
     }
 
     function setTargetAttribute(attr) {
-        if (playerAttributes[attr].locked) return;
         selectedAttributeTarget = attr;
-        document.getElementById('target-stat-name').innerText = attr;
         document.getElementById('active-selection-prompt').classList.remove('hidden');
+        document.getElementById('target-stat-name').innerText = attr;
+        renderAttributeProgress();
+        if(currentTeam) renderRosterPlayers();
     }
 
     function triggerTeamSpin() {
-        if (lockedCount >= 16) return;
+        const titleEl = document.getElementById('current-spun-team');
+        const tagEl = document.getElementById('team-type-tag');
         
-        let randomIndex = Math.floor(Math.random() * teamsDatabase.length);
-        currentTeam = teamsDatabase[randomIndex];
+        titleEl.classList.remove('spinning-text');
+        void titleEl.offsetWidth;
+        titleEl.classList.add('spinning-text');
 
-        if (currentTeam.type === 'current' && !pulledCurrentTeamsForCareer.includes(currentTeam.team)) {
-            pulledCurrentTeamsForCareer.push(currentTeam.team);
+        currentTeam = squadsData[Math.floor(Math.random() * squadsData.length)];
+        
+        tagEl.innerHTML = `<span class="team-banner classic-badge">Classic Squad</span>`;
+        titleEl.innerText = currentTeam.name;
+
+        if(!pulledCurrentTeamsForCareer.includes(currentTeam.name)) {
+            pulledCurrentTeamsForCareer.push(currentTeam.name);
         }
 
-        const tagContainer = document.getElementById('team-type-tag');
-        tagContainer.innerHTML = `<span class="team-banner ${currentTeam.type === 'classic' ? 'classic-badge' : 'current-badge'}">${currentTeam.type.toUpperCase()} SQUAD • ${currentTeam.league}</span>`;
-
-        const spunTitle = document.getElementById('current-spun-team');
-        spunTitle.classList.remove('spinning-text');
-        void spunTitle.offsetWidth; 
-        spunTitle.classList.add('spinning-text');
-        spunTitle.innerText = currentTeam.team;
-
-        renderRosterOptions();
+        renderRosterPlayers();
     }
 
     function respinTeam() {
-        if (respinsLeft <= 0) return;
+        if(respinsLeft <= 0) return;
         respinsLeft--;
         document.getElementById('respin-count-badge').innerText = respinsLeft;
-        if (respinsLeft === 0) {
+        if(respinsLeft === 0) {
             document.getElementById('respin-btn').disabled = true;
-            document.getElementById('respin-btn').style.opacity = '0.5';
+            document.getElementById('respin-btn').style.opacity = 0.5;
         }
         triggerTeamSpin();
     }
 
-    function renderRosterOptions() {
+    function renderRosterPlayers() {
         const container = document.getElementById('roster-container');
         container.classList.remove('hidden');
         container.innerHTML = '';
 
-        currentTeam.players.forEach((player, idx) => {
-            const card = document.createElement('div');
-            card.className = `player-card-option ${player.used ? 'used' : ''}`;
-            card.innerHTML = `<span><strong>${player.name}</strong></span><span style="color:var(--text-muted); font-size:0.85rem;">Select</span>`;
-            
-            if (!player.used) {
-                card.onclick = () => assignPlayerStats(idx);
-            }
-            container.appendChild(card);
+        currentTeam.players.forEach(playerName => {
+            const div = document.createElement('div');
+            div.className = `player-card-option`;
+            div.innerHTML = `<span>⚽ ${playerName}</span> <span style="font-size:0.8rem; color:var(--accent-gold);">Inspect Stats ➔</span>`;
+            div.onclick = () => inspectPlayer(playerName);
+            container.appendChild(div);
         });
     }
 
-    function assignPlayerStats(playerIdx) {
-        if (!selectedAttributeTarget) {
-            alert("Please select a target attribute from your build progress list first!");
+    function inspectPlayer(playerName) {
+        activeInspectedPlayer = playerName;
+        document.getElementById('inspect-player-name').innerText = playerName;
+        
+        const statsGrid = document.getElementById('inspect-stats-grid');
+        statsGrid.innerHTML = '';
+        
+        const stats = predeterminedStatsDatabase[playerName] || {};
+        attributesList.forEach(attr => {
+            const val = stats[attr] !== undefined ? stats[attr] : 75;
+            const item = document.createElement('div');
+            item.className = 'attribute-item';
+            item.style.cursor = selectedAttributeTarget ? 'pointer' : 'default';
+            item.innerHTML = `<span>${attr}</span> <span style="color:var(--accent-gold); font-weight:bold;">${val}</span>`;
+            
+            if(selectedAttributeTarget) {
+                item.onclick = () => assignStatFromInspector(attr, val, playerName);
+            }
+            statsGrid.appendChild(item);
+        });
+
+        document.getElementById('roster-container').classList.add('hidden');
+        document.getElementById('active-spin-box').classList.add('hidden');
+        document.getElementById('player-inspector-modal').classList.remove('hidden');
+    }
+
+    function closePlayerInspector() {
+        document.getElementById('player-inspector-modal').classList.add('hidden');
+        document.getElementById('roster-container').classList.remove('hidden');
+        document.getElementById('active-spin-box').classList.remove('hidden');
+    }
+
+    function assignStatFromInspector(attr, val, playerName) {
+        if(!selectedAttributeTarget || selectedAttributeTarget !== attr) {
+            alert("Please select this attribute as your current Target Stat first!");
             return;
         }
 
-        let player = currentTeam.players[playerIdx];
-        player.used = true;
-
-        let statVal = player.ratings[selectedAttributeTarget] || 80;
-
-        playerAttributes[selectedAttributeTarget] = {
-            val: statVal,
-            locked: true,
-            source: `${player.name} (${currentTeam.team})`
-        };
-
-        document.getElementById(`val-${selectedAttributeTarget}`).innerText = `${statVal} (${player.name})`;
-        let itemNode = document.getElementById(`attr-item-${selectedAttributeTarget}`);
-        itemNode.classList.add('locked');
-
+        playerAttributes[attr] = { val: val, locked: true, source: playerName };
         lockedCount++;
-        selectedAttributeTarget = null;
-        document.getElementById('active-selection-prompt').classList.add('hidden');
         document.getElementById('draft-round').innerText = lockedCount;
 
-        renderRosterOptions();
+        selectedAttributeTarget = null;
+        document.getElementById('active-selection-prompt').classList.add('hidden');
+        
+        closePlayerInspector();
+        renderAttributeProgress();
 
-        if (lockedCount >= 16) {
-            finalizeBuild();
-        } else {
-            autoSelectNextAttribute();
+        if(lockedCount >= 16) {
+            finishDraft();
         }
     }
 
-    function autoSelectNextAttribute() {
-        for (let attr of attributesList) {
-            if (!playerAttributes[attr].locked) {
-                setTargetAttribute(attr);
-                break;
-            }
-        }
-    }
-
-    function finalizeBuild() {
+    function finishDraft() {
         document.getElementById('step-draft').classList.add('hidden');
         document.getElementById('step-reveal').classList.remove('hidden');
 
-        let sum = 0;
-        let count = 0;
-        for (let attr in playerAttributes) {
-            sum += playerAttributes[attr].val;
-            count++;
-        }
-        let avg = Math.round(sum / count);
+        document.getElementById('reveal-position').innerText = selectedPosition;
+        
+        let totalVal = 0;
+        attributesList.forEach(attr => totalVal += playerAttributes[attr].val);
+        const avg = Math.round(totalVal / attributesList.length);
+
+        let archetype = "Elite Maestro";
+        if(avg >= 90) archetype = "Legendary Icon";
+        else if(avg >= 85) archetype = "World-Class Dynamo";
+        else if(avg >= 80) archetype = "Star Performer";
+        else archetype = "Solid Prospect";
+
+        document.getElementById('reveal-archetype').innerText = archetype;
 
         let grade = 'C';
         let gradeClass = 'grade-C';
-        if (avg >= 90) { grade = 'S (ICONIC LEGEND)'; gradeClass = 'grade-S'; }
-        else if (avg >= 85) { grade = 'A (WORLD CLASS)'; gradeClass = 'grade-A'; }
-        else if (avg >= 80) { grade = 'B (STARTER)'; gradeClass = 'grade-B'; }
-        else if (avg >= 75) { grade = 'C (SOLID PRO)'; gradeClass = 'grade-C'; }
-        else { grade = 'D (SQUAD PLAYER)'; gradeClass = 'grade-D'; }
+        if(avg >= 92) { grade = 'S+ Tier'; gradeClass = 'grade-S'; }
+        else if(avg >= 87) { grade = 'A Tier'; gradeClass = 'grade-A'; }
+        else if(avg >= 82) { grade = 'B Tier'; gradeClass = 'grade-B'; }
+        
+        const gradeBadge = document.getElementById('reveal-grade');
+        gradeBadge.className = `grade-badge ${gradeClass}`;
+        gradeBadge.innerText = `${avg} OVR (${grade})`;
 
-        document.getElementById('reveal-position').innerText = selectedPosition;
-        document.getElementById('reveal-archetype').innerText = `${avg} OVR Baller`;
-        let badge = document.getElementById('reveal-grade');
-        badge.innerText = grade;
-        badge.className = `grade-badge ${gradeClass}`;
-
-        const finalContainer = document.getElementById('final-attribute-list');
-        finalContainer.innerHTML = '';
+        const finalAttrs = document.getElementById('final-attribute-list');
+        finalAttrs.innerHTML = '';
         attributesList.forEach(attr => {
-            let data = playerAttributes[attr];
+            const data = playerAttributes[attr];
             const div = document.createElement('div');
             div.className = 'attribute-item locked';
-            div.innerHTML = `<span><strong>${attr}</strong>: ${data.val}</span><span style="font-size:0.8rem; color:var(--text-muted);">${data.source}</span>`;
-            finalContainer.appendChild(div);
+            div.innerHTML = `<span>${attr}</span> <strong>${data.val} (${data.source})</strong>`;
+            finalAttrs.appendChild(div);
         });
     }
 
@@ -841,13 +571,8 @@
 
         const select = document.getElementById('career-team-select');
         select.innerHTML = '';
-
-        if (pulledCurrentTeamsForCareer.length === 0) {
-            pulledCurrentTeamsForCareer = ["Real Madrid (Current)", "Barcelona (Current)", "Man City (Current)"];
-        }
-
         pulledCurrentTeamsForCareer.forEach(teamName => {
-            let opt = document.createElement('option');
+            const opt = document.createElement('option');
             opt.value = teamName;
             opt.innerText = teamName;
             select.appendChild(opt);
@@ -855,46 +580,32 @@
     }
 
     function simulateSeason() {
-        const chosenClub = document.getElementById('career-team-select').value;
+        const chosenTeam = document.getElementById('career-team-select').value;
         document.getElementById('step-career-team').classList.add('hidden');
         document.getElementById('step-sim').classList.remove('hidden');
 
-        let sum = 0;
-        attributesList.forEach(attr => sum += playerAttributes[attr].val);
-        let ovr = Math.round(sum / attributesList.length);
+        let totalVal = 0;
+        attributesList.forEach(attr => totalVal += playerAttributes[attr].val);
+        const avg = Math.round(totalVal / attributesList.length);
 
-        let goals = Math.max(5, Math.floor((ovr - 70) * 1.4) + Math.floor(Math.random() * 10));
-        let assists = Math.max(3, Math.floor((ovr - 70) * 1.1) + Math.floor(Math.random() * 8));
-        let motm = Math.floor(goals / 3) + Math.floor(Math.random() * 5);
-        let avgRating = (7.0 + ((ovr - 70) * 0.03) + (Math.random() * 0.4)).toFixed(2);
+        const goals = Math.round((avg - 60) * 1.8 + Math.random() * 10);
+        const assists = Math.round((avg - 60) * 1.4 + Math.random() * 8);
+        const rating = (7.0 + (avg - 70) * 0.05).toFixed(2);
 
-        let wonLeague = ovr > 83 && Math.random() > 0.3;
-        let wonUCL = ovr > 87 && Math.random() > 0.5;
-        let wonBallonDor = ovr > 90 && Math.random() > 0.4;
-
-        let honorsHtml = `<ul style="margin:10px 0 0 20px; padding:0; color:var(--accent-gold);">`;
-        if (wonLeague) honorsHtml += `<li>🏆 Domestic League Champion with ${chosenClub}</li>`;
-        if (wonUCL) honorsHtml += `<li>⭐ UEFA Champions League Winner</li>`;
-        if (wonBallonDor) honorsHtml += `<li>🥇 Ballon d'Or Winner</li>`;
-        if (!wonLeague && !wonUCL && !wonBallonDor) honorsHtml += `<li>Strong campaign with consistent starting minutes.</li>`;
-        honorsHtml += `</ul>`;
-
-        const content = document.getElementById('sim-results-content');
-        content.innerHTML = `
-            <div style="background:var(--bg-color); padding:20px; border-radius:12px; border:1px solid var(--border-color); text-align:center; margin-bottom:20px;">
-                <h3 style="color:var(--accent-gold); margin-top:0;">Career Simulation: ${chosenClub}</h3>
-                <p style="color:var(--text-muted); margin-bottom:5px;">Overall Rating: <strong>${ovr} OVR</strong></p>
+        const resultsDiv = document.getElementById('sim-results-content');
+        resultsDiv.innerHTML = `
+            <div style="background: var(--bg-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
+                <h3 style="color:var(--accent-gold); margin-top:0;">Career Simulation Complete with ${chosenTeam}</h3>
+                <p>Your custom player dominated the pitch with an overall rating of <strong>${avg}</strong>.</p>
+                <table class="stats-table">
+                    <tr><th>Stat Metric</th><th>Recorded Output</th></tr>
+                    <tr><td>Appearances</td><td>38 Matches</td></tr>
+                    <tr><td>Goals Scored</td><td>${Math.max(5, goals)} Goals</td></tr>
+                    <tr><td>Assists Provided</td><td>${Math.max(3, assists)} Assists</td></tr>
+                    <tr><td>Average Match Rating</td><td>${rating} / 10.0</td></tr>
+                    <tr><td>Trophies Won</td><td>League Title, Domestic Cup Winner</td></tr>
+                </table>
             </div>
-            <table class="stats-table">
-                <tr><th>Performance Metric</th><th>Stat Result</th></tr>
-                <tr><td>Appearances</td><td>52 Matches</td></tr>
-                <tr><td>Goals Scored</td><td><strong>${goals}</strong></td></tr>
-                <tr><td>Assists Provided</td><td><strong>${assists}</strong></td></tr>
-                <tr><td>Man of the Match Awards</td><td>${motm}</td></tr>
-                <tr><td>Average Match Rating</td><td>${avgRating} / 10</td></tr>
-            </table>
-            <h3 style="margin-top:25px;">Trophies & Individual Honors</h3>
-            ${honorsHtml}
         `;
     }
 </script>
