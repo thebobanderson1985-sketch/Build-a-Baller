@@ -130,15 +130,10 @@
             align-items: center;
             border-left: 4px solid var(--border-color);
             font-size: 0.95rem;
-            cursor: pointer;
+            cursor: default;
             transition: all 0.2s;
         }
-        .attribute-item:hover:not(.locked) {
-            border-color: var(--accent-gold);
-            background: rgba(251, 191, 36, 0.05);
-            transform: translateY(-1px);
-        }
-        .attribute-item.locked { border-left-color: var(--success); background: rgba(16, 185, 129, 0.03); cursor: default; }
+        .attribute-item.locked { border-left-color: var(--success); background: rgba(16, 185, 129, 0.03); }
         .grade-badge {
             padding: 3px 10px;
             border-radius: 6px;
@@ -175,8 +170,6 @@
             transition: all 0.2s;
         }
         .player-card-option:hover { border-color: var(--accent-gold); background: #1a2638; transform: scale(1.01); }
-        .player-card-option.used { opacity: 0.4; filter: grayscale(80%); cursor: not-allowed; border-color: #374151; }
-        .player-card-option.used:hover { border-color: #374151; background: var(--card-bg); transform: none; }
         .team-banner {
             padding: 6px 14px;
             border-radius: 20px;
@@ -191,17 +184,30 @@
         .current-badge { background: #3b82f6; color: #fff; }
         .hidden { display: none !important; }
         .spinning-text { animation: slotRoll 0.3s ease-in-out; }
-        .stats-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .stats-table th, .stats-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid var(--border-color);
-        }
         .stats-table th { color: var(--text-muted); font-size: 0.9rem; }
+        
+        /* Modal Overlay CSS */
+        #player-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--card-bg);
+            border: 1px solid var(--accent-gold);
+            border-radius: 16px;
+            padding: 25px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
     </style>
 </head>
 <body>
@@ -229,24 +235,35 @@
     <div id="step-draft" class="card hidden">
         <h2>2. Build Your Player (<span id="draft-round">0</span>/16 Attributes Locked)</h2>
         
-        <!-- Spin Reveal Screen -->
-        <div id="active-spin-box" style="background: var(--bg-color); padding: 18px; border-radius: 12px; text-align: center; margin-bottom: 20px; border: 1px solid var(--border-color);">
+        <!-- Spin Reveal Screen / Buffer -->
+        <div id="active-spin-box" style="background: var(--bg-color); padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 20px; border: 1px solid var(--border-color); min-height: 120px; display: flex; flex-direction: column; justify-content: center;">
             <div id="team-type-tag"></div>
-            <h3 id="current-spun-team" class="spinning-text" style="margin:5px 0 12px 0; color:var(--accent-gold); font-size: 1.4rem;"></h3>
-            <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;">
-                <button class="btn btn-danger" id="respin-btn" onclick="respinTeam()" style="margin-top:0; width: auto; padding: 10px 20px;">Respin Team (<span id="respin-count-badge">3</span> Left)</button>
-                <button class="btn" onclick="triggerTeamSpin()" style="margin-top:0; width: auto; padding: 10px 20px;">Spin Next Squad ➔</button>
+            <h3 id="current-spun-team" class="spinning-text" style="margin:5px 0 12px 0; color:var(--text-muted); font-size: 1.4rem;">???</h3>
+            <div style="display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;" id="spin-controls">
+                <button class="btn btn-danger hidden" id="respin-btn" onclick="respinTeam()" style="margin-top:0; width: auto; padding: 10px 20px;">Respin Team (<span id="respin-count-badge">3</span> Left)</button>
+                <button class="btn" id="spin-btn-main" onclick="triggerTeamSpin()" style="margin-top:0; width: auto; padding: 10px 30px;">Press to Spin</button>
             </div>
         </div>
 
+        <!-- Hidden Prompt (Kept for code integrity as requested) -->
         <div id="active-selection-prompt" class="hidden" style="margin-bottom: 15px; padding: 10px 15px; background: rgba(251, 191, 36, 0.1); border: 1px solid var(--accent-gold); border-radius: 8px; text-align: center;">
             <span style="font-weight: bold; color: var(--accent-gold);">Target Stat: <span id="target-stat-name" style="color: #fff;">None</span></span> — Click a player below to assign their rating!
         </div>
 
         <div id="roster-container" class="roster-grid hidden"></div>
 
-        <h3 style="margin-top:30px;">Your Build Progress (Click any unlocked stat to target it)</h3>
+        <h3 style="margin-top:30px;">Your Build Progress</h3>
         <div class="attribute-list" id="attribute-progress-list"></div>
+    </div>
+
+    <!-- PLAYER STAT MODAL -->
+    <div id="player-modal-overlay" class="hidden">
+        <div class="modal-content">
+            <h2 id="modal-player-name" style="text-align: center; margin-bottom: 5px;">Player Name</h2>
+            <p style="text-align: center; color: var(--text-muted); margin-top: 0;">Click a stat to lock it in for your build.</p>
+            <div id="modal-stat-list" class="grid-options" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));"></div>
+            <button class="btn btn-danger" onclick="closePlayerModal()" style="margin-top: 25px;">Cancel & Go Back</button>
+        </div>
     </div>
 
     <!-- STEP 3: REVEAL & ARCHETYPE -->
@@ -292,7 +309,6 @@
     let currentTeam = null;
     let respinsLeft = 3;
     let lockedCount = 0;
-    let selectedAttributeTarget = null;
     let pulledCurrentTeamsForCareer = [];
 
     function generate18PlayerRoster(starters, bench, reserves) {
@@ -327,455 +343,230 @@
     }
 
     const teamsDatabase = [
-        { 
-            team: "2014-15 Barcelona", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Lionel Messi (RW)", "Neymar Jr (LW)", "Luis Suárez (ST)", "Andrés Iniesta (CM)", "Xavi Hernández (CM)", "Sergio Busquets (CDM)", "Gerard Piqué (CB)", "Javier Mascherano (CB)", "Dani Alves (RB)", "Jordi Alba (LB)", "Marc-André ter Stegen (GK)"],
-                ["Ivan Rakitic (CM)", "Pedro (LW)", "Claudio Bravo (GK)", "Marc Bartra (CB)", "Adriano (LB)"],
-                ["Rafinha (CM)", "Munir El Haddadi (ST)"]
-            )
-        },
-        { 
-            team: "2008-09 Barcelona", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Lionel Messi (RW)", "Thierry Henry (LW)", "Samuel Eto'o (ST)", "Xavi Hernández (CM)", "Andrés Iniesta (CM)", "Yaya Touré (CDM)", "Carles Puyol (CB)", "Gerard Piqué (CB)", "Dani Alves (RB)", "Eric Abidal (LB)", "Víctor Valdés (GK)"],
-                ["Sergio Busquets (CDM)", "Bojan Krkić (ST)", "Seydou Keita (CM)", "Gabriel Milito (CB)", "Sylvinho (LB)"],
-                ["Martín Cáceres (CB)", "Albert Jorquera (GK)"]
-            )
-        },
-        { 
-            team: "2011-12 Real Madrid", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gonzalo Higuaín (ST)", "Mesut Özil (CAM)", "Xabi Alonso (CDM)", "Sami Khedira (CM)", "Sergio Ramos (CB)", "Pepe (CB)", "Álvaro Arbeloa (RB)", "Marcelo (LB)", "Iker Casillas (GK)"],
-                ["Kaká (CAM)", "Ángel Di María (RW)", "José Callejón (RW)", "Raphaël Varane (CB)", "Fabio Coentrão (LB)"],
-                ["Esteban Granero (CM)", "Antonio Adán (GK)"]
-            )
-        },
-        { 
-            team: "2016-17 Real Madrid", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gareth Bale (RW)", "Luka Modrić (CM)", "Toni Kroos (CM)", "Casemiro (CDM)", "Sergio Ramos (CB)", "Pepe (CB)", "Dani Carvajal (RB)", "Marcelo (LB)", "Keylor Navas (GK)"],
-                ["Isco (CAM)", "James Rodríguez (CAM)", "Marco Asensio (LW)", "Álvaro Morata (ST)", "Mateo Kovačić (CM)"],
-                ["Danilo (RB)", "Raphaël Varane (CB)"]
-            )
-        },
-        { 
-            team: "1998-99 Manchester United", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Dwight Yorke (ST)", "Andy Cole (ST)", "Ryan Giggs (LM)", "David Beckham (RM)", "Roy Keane (CM)", "Paul Scholes (CM)", "Jaap Stam (CB)", "Ronny Johnsen (CB)", "Denis Irwin (LB)", "Gary Neville (RB)", "Peter Schmeichel (GK)"],
-                ["Ole Gunnar Solskjær (ST)", "Teddy Sheringham (ST)", "Nicky Butt (CM)", "Jesper Blomqvist (LM)", "Wes Brown (CB)"],
-                ["Phil Neville (LB)", "Raimond van der Gouw (GK)"]
-            )
-        },
-        { 
-            team: "2007-08 Manchester United", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Cristiano Ronaldo (LW)", "Wayne Rooney (ST)", "Carlos Tevez (ST)", "Paul Scholes (CM)", "Michael Carrick (CM)", "Owen Hargreaves (CDM)", "Rio Ferdinand (CB)", "Nemanja Vidić (CB)", "Patrice Evra (LB)", "Wes Brown (RB)", "Edwin van der Sar (GK)"],
-                ["Nani (RW)", "Park Ji-sung (LM)", "Anderson (CM)", "John O'Shea (RB)", "Gerard Piqué (CB)"],
-                ["Louis Saha (ST)", "Tomasz Kuszczak (GK)"]
-            )
-        },
-        { 
-            team: "2003-04 Arsenal Invincibles", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Thierry Henry (ST)", "Dennis Bergkamp (CF)", "Robert Pires (LM)", "Freddie Ljungberg (RM)", "Patrick Vieira (CM)", "Gilberto Silva (CDM)", "Sol Campbell (CB)", "Kolo Touré (CB)", "Ashley Cole (LB)", "Lauren (RB)", "Jens Lehmann (GK)"],
-                ["Sylvain Wiltord (ST)", "José Antonio Reyes (LW)", "Edu (CM)", "Ray Parlour (RM)", "Martin Keown (CB)"],
-                ["Pascal Cygan (CB)", "Stuart Taylor (GK)"]
-            )
-        },
-        { 
-            team: "2019-20 Liverpool", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Mohamed Salah (RW)", "Sadio Mané (LW)", "Roberto Firmino (CF)", "Jordan Henderson (CM)", "Fabinho (CDM)", "Georginio Wijnaldum (CM)", "Virgil van Dijk (CB)", "Joe Gomez (CB)", "Andrew Robertson (LB)", "Trent Alexander-Arnold (RB)", "Alisson Becker (GK)"],
-                ["Divock Origi (ST)", "Alex Oxlade-Chamberlain (CM)", "James Milner (CM)", "Naby Keïta (CM)", "Joel Matip (CB)"],
-                ["Dejan Lovren (CB)", "Adrián (GK)"]
-            )
-        },
-        { 
-            team: "2012-13 Bayern Munich", type: "classic", league: "Bundesliga", 
-            players: generate18PlayerRoster(
-                ["Mario Mandžukić (ST)", "Franck Ribéry (LM)", "Arjen Robben (RM)", "Thomas Müller (CAM)", "Bastian Schweinsteiger (CM)", "Javi Martínez (CDM)", "Jérôme Boateng (CB)", "Dante (CB)", "David Alaba (LB)", "Philipp Lahm (RB)", "Manuel Neuer (GK)"],
-                ["Claudio Pizarro (ST)", "Mario Götze (CAM)", "Xherdan Shaqiri (RW)", "Luiz Gustavo (CDM)", "Anatoliy Tymoshchuk (CDM)"],
-                ["Daniel Van Buyten (CB)", "Tom Starke (GK)"]
-            )
-        },
-        { 
-            team: "2019-20 Bayern Munich", type: "classic", league: "Bundesliga", 
-            players: generate18PlayerRoster(
-                ["Robert Lewandowski (ST)", "Serge Gnabry (RW)", "Kingsley Coman (LW)", "Thomas Müller (CAM)", "Leon Goretzka (CM)", "Thiago Alcântara (CM)", "David Alaba (CB)", "Jérôme Boateng (CB)", "Alphonso Davies (LB)", "Benjamin Pavard (RB)", "Manuel Neuer (GK)"],
-                ["Ivan Perišić (LW)", "Philippe Coutinho (CAM)", "Joshua Kimmich (RB)", "Corentin Tolisso (CM)", "Javi Martínez (CDM)"],
-                ["Lucas Hernández (CB)", "Sven Ulreich (GK)"]
-            )
-        },
-        { 
-            team: "2009-10 Inter Milan", type: "classic", league: "Serie A", 
-            players: generate18PlayerRoster(
-                ["Samuel Eto'o (ST)", "Diego Milito (ST)", "Goran Pandev (LW)", "Wesley Sneijder (CAM)", "Esteban Cambiasso (CM)", "Javier Zanetti (CDM)", "Walter Samuel (CB)", "Lúcio (CB)", "Cristian Chivu (LB)", "Maicon (RB)", "Julio César (GK)"],
-                ["Mario Balotelli (ST)", "Dejan Stanković (CM)", "Thiago Motta (CM)", "Marco Materazzi (CB)", "Ivan Cordoba (CB)"],
-                ["Sulley Muntari (CM)", "Francesco Toldo (GK)"]
-            )
-        },
-        { 
-            team: "2006-07 AC Milan", type: "classic", league: "Serie A", 
-            players: generate18PlayerRoster(
-                ["Filippo Inzaghi (ST)", "Alberto Gilardino (ST)", "Kaká (CAM)", "Clarence Seedorf (CM)", "Andrea Pirlo (CDM)", "Gennaro Gattuso (CM)", "Paolo Maldini (CB)", "Alessandro Nesta (CB)", "Marek Jankulovski (LB)", "Cafu (RB)", "Dida (GK)"],
-                ["Ricardo Oliveira (ST)", "Massimo Ambrosini (CM)", "Christian Brocchi (CM)", "Daniele Bonera (CB)", "Kakhaber Kaladze (CB)"],
-                ["Serginho (LM)", "Željko Kalac (GK)"]
-            )
-        },
-        { 
-            team: "2016-17 Juventus", type: "classic", league: "Serie A", 
-            players: generate18PlayerRoster(
-                ["Gonzalo Higuaín (ST)", "Paulo Dybala (CF)", "Mario Mandžukić (LW)", "Juan Cuadrado (RW)", "Miralem Pjanić (CM)", "Sami Khedira (CM)", "Giorgio Chiellini (CB)", "Leonardo Bonucci (CB)", "Alex Sandro (LB)", "Dani Alves (RB)", "Gianluigi Buffon (GK)"],
-                ["Claudio Marchisio (CM)", "Mario Lemina (CM)", "Marko Pjaca (LW)", "Medhi Benatia (CB)", "Andrea Barzagli (CB)"],
-                ["Stephan Lichtsteiner (RB)", "Neto (GK)"]
-            )
-        },
-        { 
-            team: "2001-02 Real Madrid", type: "classic", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Raúl (ST)", "Fernando Morientes (ST)", "Zinedine Zidane (CAM)", "Luís Figo (RW)", "Santiago Solari (LM)", "Claude Makélélé (CDM)", "Fernando Hierro (CB)", "Iván Helguera (CB)", "Roberto Carlos (LB)", "Michel Salgado (RB)", "César Sánchez (GK)"],
-                ["Guti (CAM)", "Steve McManaman (RW)", "Flavio Conceição (CM)", "Francisco Pavón (CB)", "Albert Celades (CM)"],
-                ["Portillo (ST)", "Iker Casillas (GK)"]
-            )
-        },
-        { 
-            team: "2004-05 Chelsea", type: "classic", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Didier Drogba (ST)", "Eiður Guðjohnsen (ST)", "Arjen Robben (RW)", "Damien Duff (LW)", "Frank Lampard (CAM)", "Claude Makélélé (CDM)", "John Terry (CB)", "Ricardo Carvalho (CB)", "William Gallas (LB)", "Paulo Ferreira (RB)", "Petr Čech (GK)"],
-                ["Mateja Kežman (ST)", "Joe Cole (RW)", "Tiago Mendes (CM)", "Geremi (RB)", "Wayne Bridge (LB)"],
-                ["Robert Huth (CB)", "Carlo Cudicini (GK)"]
-            )
-        },
-        { 
-            team: "Barcelona (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Robert Lewandowski (ST)", "Lamine Yamal (RW)", "Raphinha (LW)", "Pedri (CM)", "Frenkie de Jong (CM)", "Dani Olmo (CAM)", "Ronald Araújo (CB)", "Pau Cubarsí (CB)", "Alejandro Balde (LB)", "Jules Koundé (RB)", "Marc-André ter Stegen (GK)"],
-                ["Ferran Torres (LW)", "Ansu Fati (LW)", "Gavi (CM)", "Fermin Lopez (CAM)", "Andreas Christensen (CB)"],
-                ["Eric Garcia (CB)", "Wojciech Szczęsny (GK)"]
-            )
-        },
-        { 
-            team: "Real Madrid (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Kylian Mbappé (ST)", "Vinícius Júnior (LW)", "Rodrygo (RW)", "Jude Bellingham (CAM)", "Federico Valverde (CM)", "Aurélien Tchouaméni (CDM)", "Antonio Rüdiger (CB)", "Éder Militão (CB)", "Ferland Mendy (LB)", "Dani Carvajal (RB)", "Thibaut Courtois (GK)"],
-                ["Endrick (ST)", "Brahim Díaz (RW)", "Arda Güler (CAM)", "Eduardo Camavinga (CM)", "Dean Huijsen (CB)"],
-                ["Trent Alexander-Arnold (RB)", "Andriy Lunin (GK)"]
-            )
-        },
-        { 
-            team: "Atletico Madrid (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Antoine Griezmann (ST)", "Julián Álvarez (ST)", "Alexander Sørloth (ST)", "Rodrigo De Paul (CM)", "Koke (CM)", "Conor Gallagher (CM)", "José María Giménez (CB)", "Robin Le Normand (CB)", "Reinildo Mandava (LB)", "Nahuel Molina (RB)", "Jan Oblak (GK)"],
-                ["Ángel Correa (RW)", "Samuel Lino (LW)", "Pablo Barrios (CM)", "Axel Witsel (CB)", "César Azpilicueta (RB)"],
-                ["Thomas Lemar (CM)", "Juan Musso (GK)"]
-            )
-        },
-        { 
-            team: "Real Betis (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Cédric Bakambu (ST)", "Vitor Roque (ST)", "Isco (CAM)", "Giovani Lo Celso (CAM)", "Johnny Cardoso (CDM)", "William Carvalho (CM)", "Marc Bartra (CB)", "Diego Llorente (CB)", "Romain Perraud (LB)", "Hector Bellerin (RB)", "Rui Silva (GK)"],
-                ["Abde Ezzalzouli (LW)", "Antony (RW)", "Pablo Fornals (CAM)", "Sergi Altimira (CM)", "Natan (CB)"],
-                ["Youssouf Sabaly (RB)", "Adrián (GK)"]
-            )
-        },
-        { 
-            team: "Sevilla (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Isaac Romero (ST)", "Kelechi Iheanacho (ST)", "Dodi Lukebakio (RW)", "Chidera Ejuke (LW)", "Suso (CAM)", "Nemanja Gudelj (CDM)", "Loïc Badé (CB)", "Marcão (CB)", "Adrià Pedrosa (LB)", "José Ángel Carmona (RB)", "Ørjan Nyland (GK)"],
-                ["Lucas Ocampos (RW)", "Erik Lamela (RW)", "Joan Jordán (CM)", "Djibril Sow (CM)", "Tanguy Nianzou (CB)"],
-                ["Gonzalo Montiel (RB)", "Álvaro Fernández (GK)"]
-            )
-        },
-        { 
-            team: "Villarreal (Current)", type: "current", league: "La Liga", 
-            players: generate18PlayerRoster(
-                ["Gerard Moreno (ST)", "Ayoze Pérez (ST)", "Nicolas Pépé (RW)", "Álex Baena (LM)", "Dani Parejo (CM)", "Santi Comesaña (CM)", "Willy Kambwala (CB)", "Raúl Albiol (CB)", "Sergi Cardona (LB)", "Juan Foyth (RB)", "Diego Conde (GK)"],
-                ["Thierno Barry (ST)", "Yeremy Pino (RW)", "Denis Suárez (CM)", "Etienne Capoue (CM)", "Eric Bailly (CB)"],
-                ["Kiko Femenía (RB)", "Luiz Júnior (GK)"]
-            )
-        },
-        { 
-            team: "Man City (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Erling Haaland (ST)", "Phil Foden (LW)", "Savinho (RW)", "Kevin De Bruyne (CM)", "Bernardo Silva (CM)", "Rodri (CDM)", "Rúben Dias (CB)", "John Stones (CB)", "Josko Gvardiol (LB)", "Kyle Walker (RB)", "Ederson (GK)"],
-                ["Jack Grealish (LW)", "Jeremy Doku (RW)", "Mateo Kovačić (CM)", "Ilkay Gündoğan (CM)", "Nathan Aké (CB)"],
-                ["Manuel Akanji (CB)", "Stefan Ortega (GK)"]
-            )
-        },
-        { 
-            team: "Manchester United (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Joshua Zirkzee (ST)", "Rasmus Højlund (ST)", "Marcus Rashford (LW)", "Alejandro Garnacho (RW)", "Bruno Fernandes (CAM)", "Kobbie Mainoo (CM)", "Casemiro (CDM)", "Lisandro Martínez (CB)", "Matthijs de Ligt (CB)", "Luke Shaw (LB)", "André Onana (GK)"],
-                ["Antony (RW)", "Mason Mount (CAM)", "Christian Eriksen (CM)", "Manuel Ugarte (CDM)", "Harry Maguire (CB)"],
-                ["Diogo Dalot (RB)", "Altay Bayındır (GK)"]
-            )
-        },
-        { 
-            team: "Liverpool (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Darwin Núñez (ST)", "Diogo Jota (ST)", "Mohamed Salah (RW)", "Luis Díaz (LW)", "Dominik Szoboszlai (CAM)", "Alexis Mac Allister (CM)", "Ryan Gravenberch (CDM)", "Virgil van Dijk (CB)", "Ibrahima Konaté (CB)", "Andrew Robertson (LB)", "Alisson Becker (GK)"],
-                ["Cody Gakpo (LW)", "Federico Chiesa (RW)", "Harvey Elliott (CAM)", "Wataru Endō (CDM)", "Joe Gomez (CB)"],
-                ["Trent Alexander-Arnold (RB)", "Caoimhín Kelleher (GK)"]
-            )
-        },
-        { 
-            team: "Arsenal (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Gabriel Jesus (ST)", "Kai Havertz (ST)", "Bukayo Saka (RW)", "Gabriel Martinelli (LW)", "Martin Ødegaard (CAM)", "Declan Rice (CDM)", "Thomas Partey (CM)", "William Saliba (CB)", "Gabriel Magalhães (CB)", "Riccardo Calafiori (LB)", "David Raya (GK)"],
-                ["Raheem Sterling (LW)", "Leandro Trossard (LW)", "Ethan Nwaneri (CAM)", "Jorginho (CDM)", "Jakub Kiwior (CB)"],
-                ["Ben White (RB)", "Neto (GK)"]
-            )
-        },
-        { 
-            team: "Newcastle United (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Alexander Isak (ST)", "Callum Wilson (ST)", "Anthony Gordon (LW)", "Jacob Murphy (RW)", "Joelinton (CM)", "Bruno Guimarães (CM)", "Sandro Tonali (CDM)", "Fabian Schär (CB)", "Dan Burn (CB)", "Lewis Hall (LB)", "Nick Pope (GK)"],
-                ["Harvey Barnes (LW)", "Miguel Almirón (RW)", "Joe Willock (CM)", "Sean Longstaff (CM)", "Lloyd Kelly (CB)"],
-                ["Tino Livramento (RB)", "Martin Dúbravka (GK)"]
-            )
-        },
-        { 
-            team: "Tottenham Hotspur (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Dominic Solanke (ST)", "Richarlison (ST)", "Son Heung-min (LW)", "Dejan Kulusevski (RW)", "James Maddison (CAM)", "Rodrigo Bentancur (CM)", "Yves Bissouma (CDM)", "Cristian Romero (CB)", "Micky van de Ven (CB)", "Destiny Udogie (LB)", "Guglielmo Vicario (GK)"],
-                ["Timo Werner (LW)", "Brennan Johnson (RW)", "Lucas Bergvall (CAM)", "Pape Matar Sarr (CM)", "Radu Drăgușin (CB)"],
-                ["Pedro Porro (RB)", "Fraser Forster (GK)"]
-            )
-        },
-        { 
-            team: "West Ham United (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Niclas Füllkrug (ST)", "Michail Antonio (ST)", "Jarrod Bowen (RW)", "Crysencio Summerville (LW)", "Lucas Paquetá (CAM)", "Tomáš Souček (CM)", "Edson Álvarez (CDM)", "Max Kilman (CB)", "Jean-Clair Todibo (CB)", "Emerson Palmieri (LB)", "Alphonse Aréola (GK)"],
-                ["Danny Ings (ST)", "Mohammed Kudus (RW)", "Carlos Soler (CM)", "Guido Rodríguez (CDM)", "Konstantinos Mavropanos (CB)"],
-                ["Aaron Wan-Bissaka (RB)", "Łukasz Fabiański (GK)"]
-            )
-        },
-        { 
-            team: "Aston Villa (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Ollie Watkins (ST)", "Jhon Durán (ST)", "Leon Bailey (RW)", "Jacob Ramsey (LW)", "Morgan Rogers (CAM)", "Youri Tielemans (CM)", "Amadou Onana (CDM)", "Pau Torres (CB)", "Ezri Konsa (CB)", "Lucas Digne (LB)", "Emiliano Martínez (GK)"],
-                ["Emiliano Buendía (RW)", "John McGinn (CM)", "Ross Barkley (CM)", "Boubacar Kamara (CDM)", "Diego Carlos (CB)"],
-                ["Matty Cash (RB)", "Joe Gauci (GK)"]
-            )
-        },
-        { 
-            team: "Brighton (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["João Pedro (ST)", "Evan Ferguson (ST)", "Kaoru Mitoma (LW)", "Yankuba Minteh (RW)", "Georginio Rutter (CAM)", "Carlos Baleba (CM)", "Mats Wieffer (CDM)", "Lewis Dunk (CB)", "Jan Paul van Hecke (CB)", "Pervis Estupiñán (LB)", "Bart Verbruggen (GK)"],
-                ["Danny Welbeck (ST)", "Simon Adingra (RW)", "Julio Enciso (CAM)", "Jakub Moder (CM)", "Igor Julio (CB)"],
-                ["Tariq Lamptey (RB)", "Jason Steele (GK)"]
-            )
-        },
-        { 
-            team: "Chelsea (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Nicolas Jackson (ST)", "Christopher Nkunku (ST)", "Pedro Neto (RW)", "Jadon Sancho (LW)", "Cole Palmer (CAM)", "Enzo Fernández (CM)", "Moises Caicedo (CDM)", "Levi Colwill (CB)", "Wesley Fofana (CB)", "Marc Cucurella (LB)", "Robert Sánchez (GK)"],
-                ["Marc Guiu (ST)", "Noni Madueke (RW)", "Mykhailo Mudryk (LW)", "Kiernan Dewsbury-Hall (CM)", "Romeo Lavia (CDM)"],
-                ["Benoît Badiashile (CB)", "Filip Jørgensen (GK)"]
-            )
-        },
-        { 
-            team: "Leeds United", type: "current", league: "Championship", 
-            players: generate18PlayerRoster(
-                ["Mateo Joseph (ST)", "Patrick Bamford (ST)", "Wilfried Gnonto (LW)", "Dan James (RW)", "Brenden Aaronson (CAM)", "Ethan Ampadu (CM)", "Illia Gruev (CDM)", "Pascal Struijk (CB)", "Joe Rodon (CB)", "Junior Firpo (LB)", "Illan Meslier (GK)"],
-                ["Joel Piroe (ST)", "Largie Ramazani (RW)", "Manor Solomon (LW)", "Joe Rothwell (CM)", "Sam Byram (LB)"],
-                ["Jayden Bogle (RB)", "Karl Darlow (GK)"]
-            )
-        },
-        { 
-            team: "Crystal Palace (Current)", type: "current", league: "Premier League", 
-            players: generate18PlayerRoster(
-                ["Jean-Philippe Mateta (ST)", "Eddie Nketiah (ST)", "Eberechi Eze (CAM)", "Ismaïla Sarr (RW)", "Daichi Kamada (CAM)", "Adam Wharton (CM)", "Cheick Doucouré (CDM)", "Marc Guéhi (CB)", "Maxence Lacroix (CB)", "Tyrick Mitchell (LB)", "Dean Henderson (GK)"],
-                ["Odsonne Édouard (ST)", "Jeffrey Schlupp (LM)", "Will Hughes (CM)", "Nathaniel Clyne (RB)", "Chadi Riad (CB)"],
-                ["Trevoh Chalobah (CB)", "Matt Turner (GK)"]
-            )
-        },
-        { 
-            team: "Bayern Munich (Current)", type: "current", league: "Bundesliga", 
-            players: generate18PlayerRoster(
-                ["Harry Kane (ST)", "Jamal Musiala (CAM)", "Michael Olise (RW)", "Serge Gnabry (LW)", "Thomas Müller (CAM)", "Joshua Kimmich (CM)", "Aleksandar Pavlović (CDM)", "Kim Min-jae (CB)", "Dayot Upamecano (CB)", "Alphonso Davies (LB)", "Manuel Neuer (GK)"],
-                ["Mathys Tel (ST)", "Kingsley Coman (LW)", "João Palhinha (CDM)", "Leon Goretzka (CM)", "Josip Stanišić (RB)"],
-                ["Raphaël Guerreiro (LB)", "Sven Ulreich (GK)"]
-            )
-        }
+        { team: "2014-15 Barcelona", type: "classic", league: "La Liga", players: generate18PlayerRoster(["Lionel Messi (RW)", "Neymar Jr (LW)", "Luis Suárez (ST)", "Andrés Iniesta (CM)", "Xavi Hernández (CM)", "Sergio Busquets (CDM)", "Gerard Piqué (CB)", "Javier Mascherano (CB)", "Dani Alves (RB)", "Jordi Alba (LB)", "Marc-André ter Stegen (GK)"], ["Ivan Rakitic (CM)", "Pedro (LW)", "Claudio Bravo (GK)", "Marc Bartra (CB)", "Adriano (LB)"], ["Rafinha (CM)", "Munir El Haddadi (ST)"]) },
+        { team: "2008-09 Barcelona", type: "classic", league: "La Liga", players: generate18PlayerRoster(["Lionel Messi (RW)", "Thierry Henry (LW)", "Samuel Eto'o (ST)", "Xavi Hernández (CM)", "Andrés Iniesta (CM)", "Yaya Touré (CDM)", "Carles Puyol (CB)", "Gerard Piqué (CB)", "Dani Alves (RB)", "Eric Abidal (LB)", "Víctor Valdés (GK)"], ["Sergio Busquets (CDM)", "Bojan Krkić (ST)", "Seydou Keita (CM)", "Gabriel Milito (CB)", "Sylvinho (LB)"], ["Martín Cáceres (CB)", "Albert Jorquera (GK)"]) },
+        { team: "2011-12 Real Madrid", type: "classic", league: "La Liga", players: generate18PlayerRoster(["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gonzalo Higuaín (ST)", "Mesut Özil (CAM)", "Xabi Alonso (CDM)", "Sami Khedira (CM)", "Sergio Ramos (CB)", "Pepe (CB)", "Álvaro Arbeloa (RB)", "Marcelo (LB)", "Iker Casillas (GK)"], ["Kaká (CAM)", "Ángel Di María (RW)", "José Callejón (RW)", "Raphaël Varane (CB)", "Fabio Coentrão (LB)"], ["Esteban Granero (CM)", "Antonio Adán (GK)"]) },
+        { team: "2016-17 Real Madrid", type: "classic", league: "La Liga", players: generate18PlayerRoster(["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gareth Bale (RW)", "Luka Modrić (CM)", "Toni Kroos (CM)", "Casemiro (CDM)", "Sergio Ramos (CB)", "Pepe (CB)", "Dani Carvajal (RB)", "Marcelo (LB)", "Keylor Navas (GK)"], ["Isco (CAM)", "James Rodríguez (CAM)", "Marco Asensio (LW)", "Álvaro Morata (ST)", "Mateo Kovačić (CM)"], ["Danilo (RB)", "Raphaël Varane (CB)"]) },
+        { team: "1998-99 Manchester United", type: "classic", league: "Premier League", players: generate18PlayerRoster(["Dwight Yorke (ST)", "Andy Cole (ST)", "Ryan Giggs (LM)", "David Beckham (RM)", "Roy Keane (CM)", "Paul Scholes (CM)", "Jaap Stam (CB)", "Ronny Johnsen (CB)", "Denis Irwin (LB)", "Gary Neville (RB)", "Peter Schmeichel (GK)"], ["Ole Gunnar Solskjær (ST)", "Teddy Sheringham (ST)", "Nicky Butt (CM)", "Jesper Blomqvist (LM)", "Wes Brown (CB)"], ["Phil Neville (LB)", "Raimond van der Gouw (GK)"]) },
+        { team: "2007-08 Manchester United", type: "classic", league: "Premier League", players: generate18PlayerRoster(["Cristiano Ronaldo (LW)", "Wayne Rooney (ST)", "Carlos Tevez (ST)", "Paul Scholes (CM)", "Michael Carrick (CM)", "Owen Hargreaves (CDM)", "Rio Ferdinand (CB)", "Nemanja Vidić (CB)", "Patrice Evra (LB)", "Wes Brown (RB)", "Edwin van der Sar (GK)"], ["Nani (RW)", "Park Ji-sung (LM)", "Anderson (CM)", "John O'Shea (RB)", "Gerard Piqué (CB)"], ["Louis Saha (ST)", "Tomasz Kuszczak (GK)"]) },
+        { team: "2003-04 Arsenal Invincibles", type: "classic", league: "Premier League", players: generate18PlayerRoster(["Thierry Henry (ST)", "Dennis Bergkamp (CF)", "Robert Pires (LM)", "Freddie Ljungberg (RM)", "Patrick Vieira (CM)", "Gilberto Silva (CDM)", "Sol Campbell (CB)", "Kolo Touré (CB)", "Ashley Cole (LB)", "Lauren (RB)", "Jens Lehmann (GK)"], ["Sylvain Wiltord (ST)", "José Antonio Reyes (LW)", "Edu (CM)", "Ray Parlour (RM)", "Martin Keown (CB)"], ["Pascal Cygan (CB)", "Stuart Taylor (GK)"]) },
+        { team: "2019-20 Liverpool", type: "classic", league: "Premier League", players: generate18PlayerRoster(["Mohamed Salah (RW)", "Sadio Mané (LW)", "Roberto Firmino (CF)", "Jordan Henderson (CM)", "Fabinho (CDM)", "Georginio Wijnaldum (CM)", "Virgil van Dijk (CB)", "Joe Gomez (CB)", "Andrew Robertson (LB)", "Trent Alexander-Arnold (RB)", "Alisson Becker (GK)"], ["Divock Origi (ST)", "Alex Oxlade-Chamberlain (CM)", "James Milner (CM)", "Naby Keïta (CM)", "Joel Matip (CB)"], ["Dejan Lovren (CB)", "Adrián (GK)"]) },
+        { team: "2012-13 Bayern Munich", type: "classic", league: "Bundesliga", players: generate18PlayerRoster(["Mario Mandžukić (ST)", "Franck Ribéry (LM)", "Arjen Robben (RM)", "Thomas Müller (CAM)", "Bastian Schweinsteiger (CM)", "Javi Martínez (CDM)", "Jérôme Boateng (CB)", "Dante (CB)", "David Alaba (LB)", "Philipp Lahm (RB)", "Manuel Neuer (GK)"], ["Claudio Pizarro (ST)", "Mario Götze (CAM)", "Xherdan Shaqiri (RW)", "Luiz Gustavo (CDM)", "Anatoliy Tymoshchuk (CDM)"], ["Daniel Van Buyten (CB)", "Tom Starke (GK)"]) },
+        { team: "2019-20 Bayern Munich", type: "classic", league: "Bundesliga", players: generate18PlayerRoster(["Robert Lewandowski (ST)", "Serge Gnabry (RW)", "Kingsley Coman (LW)", "Thomas Müller (CAM)", "Leon Goretzka (CM)", "Thiago Alcântara (CM)", "David Alaba (CB)", "Jérôme Boateng (CB)", "Alphonso Davies (LB)", "Benjamin Pavard (RB)", "Manuel Neuer (GK)"], ["Ivan Perišić (LW)", "Philippe Coutinho (CAM)", "Joshua Kimmich (RB)", "Corentin Tolisso (CM)", "Javi Martínez (CDM)"], ["Lucas Hernández (CB)", "Sven Ulreich (GK)"]) },
+        { team: "2009-10 Inter Milan", type: "classic", league: "Serie A", players: generate18PlayerRoster(["Samuel Eto'o (ST)", "Diego Milito (ST)", "Goran Pandev (LW)", "Wesley Sneijder (CAM)", "Esteban Cambiasso (CM)", "Javier Zanetti (CDM)", "Walter Samuel (CB)", "Lúcio (CB)", "Cristian Chivu (LB)", "Maicon (RB)", "Julio César (GK)"], ["Mario Balotelli (ST)", "Dejan Stanković (CM)", "Thiago Motta (CM)", "Marco Materazzi (CB)", "Ivan Cordoba (CB)"], ["Sulley Muntari (CM)", "Francesco Toldo (GK)"]) },
+        { team: "2006-07 AC Milan", type: "classic", league: "Serie A", players: generate18PlayerRoster(["Filippo Inzaghi (ST)", "Alberto Gilardino (ST)", "Kaká (CAM)", "Clarence Seedorf (CM)", "Andrea Pirlo (CDM)", "Gennaro Gattuso (CM)", "Paolo Maldini (CB)", "Alessandro Nesta (CB)", "Marek Jankulovski (LB)", "Cafu (RB)", "Dida (GK)"], ["Ricardo Oliveira (ST)", "Massimo Ambrosini (CM)", "Christian Brocchi (CM)", "Daniele Bonera (CB)", "Kakhaber Kaladze (CB)"], ["Serginho (LM)", "Željko Kalac (GK)"]) },
+        { team: "2016-17 Juventus", type: "classic", league: "Serie A", players: generate18PlayerRoster(["Gonzalo Higuaín (ST)", "Paulo Dybala (CF)", "Mario Mandžukić (LW)", "Juan Cuadrado (RW)", "Miralem Pjanić (CM)", "Sami Khedira (CM)", "Giorgio Chiellini (CB)", "Leonardo Bonucci (CB)", "Alex Sandro (LB)", "Dani Alves (RB)", "Gianluigi Buffon (GK)"], ["Claudio Marchisio (CM)", "Mario Lemina (CM)", "Marko Pjaca (LW)", "Medhi Benatia (CB)", "Andrea Barzagli (CB)"], ["Stephan Lichtsteiner (RB)", "Neto (GK)"]) },
+        { team: "2001-02 Real Madrid", type: "classic", league: "La Liga", players: generate18PlayerRoster(["Raúl (ST)", "Fernando Morientes (ST)", "Zinedine Zidane (CAM)", "Luís Figo (RW)", "Santiago Solari (LM)", "Claude Makélélé (CDM)", "Fernando Hierro (CB)", "Iván Helguera (CB)", "Roberto Carlos (LB)", "Michel Salgado (RB)", "César Sánchez (GK)"], ["Guti (CAM)", "Steve McManaman (RW)", "Flavio Conceição (CM)", "Francisco Pavón (CB)", "Albert Celades (CM)"], ["Portillo (ST)", "Iker Casillas (GK)"]) },
+        { team: "2004-05 Chelsea", type: "classic", league: "Premier League", players: generate18PlayerRoster(["Didier Drogba (ST)", "Eiður Guðjohnsen (ST)", "Arjen Robben (RW)", "Damien Duff (LW)", "Frank Lampard (CAM)", "Claude Makélélé (CDM)", "John Terry (CB)", "Ricardo Carvalho (CB)", "William Gallas (LB)", "Paulo Ferreira (RB)", "Petr Čech (GK)"], ["Mateja Kežman (ST)", "Joe Cole (RW)", "Tiago Mendes (CM)", "Geremi (RB)", "Wayne Bridge (LB)"], ["Robert Huth (CB)", "Carlo Cudicini (GK)"]) },
+        { team: "Barcelona (Current)", type: "current", league: "La Liga", players: generate18PlayerRoster(["Robert Lewandowski (ST)", "Lamine Yamal (RW)", "Raphinha (LW)", "Pedri (CM)", "Frenkie de Jong (CM)", "Dani Olmo (CAM)", "Ronald Araújo (CB)", "Pau Cubarsí (CB)", "Alejandro Balde (LB)", "Jules Koundé (RB)", "Marc-André ter Stegen (GK)"], ["Ferran Torres (LW)", "Ansu Fati (LW)", "Gavi (CM)", "Fermin Lopez (CAM)", "Andreas Christensen (CB)"], ["Eric Garcia (CB)", "Wojciech Szczęsny (GK)"]) },
+        { team: "Real Madrid (Current)", type: "current", league: "La Liga", players: generate18PlayerRoster(["Kylian Mbappé (ST)", "Vinícius Júnior (LW)", "Rodrygo (RW)", "Jude Bellingham (CAM)", "Federico Valverde (CM)", "Aurélien Tchouaméni (CDM)", "Antonio Rüdiger (CB)", "Éder Militão (CB)", "Ferland Mendy (LB)", "Dani Carvajal (RB)", "Thibaut Courtois (GK)"], ["Endrick (ST)", "Brahim Díaz (RW)", "Arda Güler (CAM)", "Eduardo Camavinga (CM)", "Dean Huijsen (CB)"], ["Trent Alexander-Arnold (RB)", "Andriy Lunin (GK)"]) },
+        { team: "Atletico Madrid (Current)", type: "current", league: "La Liga", players: generate18PlayerRoster(["Antoine Griezmann (ST)", "Julián Álvarez (ST)", "Alexander Sørloth (ST)", "Rodrigo De Paul (CM)", "Koke (CM)", "Conor Gallagher (CM)", "José María Giménez (CB)", "Robin Le Normand (CB)", "Reinildo Mandava (LB)", "Nahuel Molina (RB)", "Jan Oblak (GK)"], ["Ángel Correa (RW)", "Samuel Lino (LW)", "Pablo Barrios (CM)", "Axel Witsel (CB)", "César Azpilicueta (RB)"], ["Thomas Lemar (CM)", "Juan Musso (GK)"]) },
+        { team: "Real Betis (Current)", type: "current", league: "La Liga", players: generate18PlayerRoster(["Cédric Bakambu (ST)", "Vitor Roque (ST)", "Isco (CAM)", "Giovani Lo Celso (CAM)", "Johnny Cardoso (CDM)", "William Carvalho (CM)", "Marc Bartra (CB)", "Diego Llorente (CB)", "Romain Perraud (LB)", "Hector Bellerin (RB)", "Rui Silva (GK)"], ["Abde Ezzalzouli (LW)", "Antony (RW)", "Pablo Fornals (CAM)", "Sergi Altimira (CM)", "Natan (CB)"], ["Youssouf Sabaly (RB)", "Adrián (GK)"]) },
+        { team: "Sevilla (Current)", type: "current", league: "La Liga", players: generate18PlayerRoster(["Isaac Romero (ST)", "Kelechi Iheanacho (ST)", "Dodi Lukebakio (RW)", "Chidera Ejuke (LW)", "Suso (CAM)", "Nemanja Gudelj (CDM)", "Loïc Badé (CB)", "Marcão (CB)", "Adrià Pedrosa (LB)", "José Ángel Carmona (RB)", "Ørjan Nyland (GK)"], ["Lucas Ocampos (RW)", "Erik Lamela (RW)", "Joan Jordán (CM)", "Djibril Sow (CM)", "Tanguy Nianzou (CB)"], ["Gonzalo Montiel (RB)", "Álvaro Fernández (GK)"]) },
+        { team: "Villarreal (Current)", type: "current", league: "La Liga", players: generate18PlayerRoster(["Gerard Moreno (ST)", "Ayoze Pérez (ST)", "Nicolas Pépé (RW)", "Álex Baena (LM)", "Dani Parejo (CM)", "Santi Comesaña (CM)", "Willy Kambwala (CB)", "Raúl Albiol (CB)", "Sergi Cardona (LB)", "Juan Foyth (RB)", "Diego Conde (GK)"], ["Thierno Barry (ST)", "Yeremy Pino (RW)", "Denis Suárez (CM)", "Etienne Capoue (CM)", "Eric Bailly (CB)"], ["Kiko Femenía (RB)", "Luiz Júnior (GK)"]) },
+        { team: "Man City (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Erling Haaland (ST)", "Phil Foden (LW)", "Savinho (RW)", "Kevin De Bruyne (CM)", "Bernardo Silva (CM)", "Rodri (CDM)", "Rúben Dias (CB)", "John Stones (CB)", "Josko Gvardiol (LB)", "Kyle Walker (RB)", "Ederson (GK)"], ["Jack Grealish (LW)", "Jeremy Doku (RW)", "Mateo Kovačić (CM)", "Ilkay Gündoğan (CM)", "Nathan Aké (CB)"], ["Manuel Akanji (CB)", "Stefan Ortega (GK)"]) },
+        { team: "Manchester United (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Joshua Zirkzee (ST)", "Rasmus Højlund (ST)", "Marcus Rashford (LW)", "Alejandro Garnacho (RW)", "Bruno Fernandes (CAM)", "Kobbie Mainoo (CM)", "Casemiro (CDM)", "Lisandro Martínez (CB)", "Matthijs de Ligt (CB)", "Luke Shaw (LB)", "André Onana (GK)"], ["Antony (RW)", "Mason Mount (CAM)", "Christian Eriksen (CM)", "Manuel Ugarte (CDM)", "Harry Maguire (CB)"], ["Diogo Dalot (RB)", "Altay Bayındır (GK)"]) },
+        { team: "Liverpool (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Darwin Núñez (ST)", "Diogo Jota (ST)", "Mohamed Salah (RW)", "Luis Díaz (LW)", "Dominik Szoboszlai (CAM)", "Alexis Mac Allister (CM)", "Ryan Gravenberch (CDM)", "Virgil van Dijk (CB)", "Ibrahima Konaté (CB)", "Andrew Robertson (LB)", "Alisson Becker (GK)"], ["Cody Gakpo (LW)", "Federico Chiesa (RW)", "Harvey Elliott (CAM)", "Wataru Endō (CDM)", "Joe Gomez (CB)"], ["Trent Alexander-Arnold (RB)", "Caoimhín Kelleher (GK)"]) },
+        { team: "Arsenal (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Gabriel Jesus (ST)", "Kai Havertz (ST)", "Bukayo Saka (RW)", "Gabriel Martinelli (LW)", "Martin Ødegaard (CAM)", "Declan Rice (CDM)", "Thomas Partey (CM)", "William Saliba (CB)", "Gabriel Magalhães (CB)", "Riccardo Calafiori (LB)", "David Raya (GK)"], ["Raheem Sterling (LW)", "Leandro Trossard (LW)", "Ethan Nwaneri (CAM)", "Jorginho (CDM)", "Jakub Kiwior (CB)"], ["Ben White (RB)", "Neto (GK)"]) },
+        { team: "Newcastle United (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Alexander Isak (ST)", "Callum Wilson (ST)", "Anthony Gordon (LW)", "Jacob Murphy (RW)", "Joelinton (CM)", "Bruno Guimarães (CM)", "Sandro Tonali (CDM)", "Fabian Schär (CB)", "Dan Burn (CB)", "Lewis Hall (LB)", "Nick Pope (GK)"], ["Harvey Barnes (LW)", "Miguel Almirón (RW)", "Joe Willock (CM)", "Sean Longstaff (CM)", "Lloyd Kelly (CB)"], ["Tino Livramento (RB)", "Martin Dúbravka (GK)"]) },
+        { team: "Tottenham Hotspur (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Dominic Solanke (ST)", "Richarlison (ST)", "Son Heung-min (LW)", "Dejan Kulusevski (RW)", "James Maddison (CAM)", "Rodrigo Bentancur (CM)", "Yves Bissouma (CDM)", "Cristian Romero (CB)", "Micky van de Ven (CB)", "Destiny Udogie (LB)", "Guglielmo Vicario (GK)"], ["Timo Werner (LW)", "Brennan Johnson (RW)", "Lucas Bergvall (CAM)", "Pape Matar Sarr (CM)", "Radu Drăgușin (CB)"], ["Pedro Porro (RB)", "Fraser Forster (GK)"]) },
+        { team: "West Ham United (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Niclas Füllkrug (ST)", "Michail Antonio (ST)", "Jarrod Bowen (RW)", "Crysencio Summerville (LW)", "Lucas Paquetá (CAM)", "Tomáš Souček (CM)", "Edson Álvarez (CDM)", "Max Kilman (CB)", "Jean-Clair Todibo (CB)", "Emerson Palmieri (LB)", "Alphonse Aréola (GK)"], ["Danny Ings (ST)", "Mohammed Kudus (RW)", "Carlos Soler (CM)", "Guido Rodríguez (CDM)", "Konstantinos Mavropanos (CB)"], ["Aaron Wan-Bissaka (RB)", "Łukasz Fabiański (GK)"]) },
+        { team: "Aston Villa (Current)", type: "current", league: "Premier League", players: generate18PlayerRoster(["Ollie Watkins (ST)", "Jhon Durán (ST)", "Leon Bailey (RW)", "Jacob Ramsey (LW)", "Morgan Rogers (CAM)", "Youri Tielemans (CM)", "John McGinn (CM)", "Douglas Luiz (CDM)", "Pau Torres (CB)", "Diego Carlos (CB)", "Lucas Digne (LB)", "Matty Cash (RB)", "Emiliano Martínez (GK)"], ["Moussa Diaby (RW)", "Nicolò Zaniolo (CAM)", "Boubacar Kamara (CDM)", "Ezri Konsa (CB)", "Clément Lenglet (CB)"], ["Alex Moreno (LB)", "Robin Olsen (GK)"]) }
     ];
 
     function selectPosition(pos, event) {
         selectedPosition = pos;
-        document.querySelectorAll('#step-position .option-card').forEach(c => c.classList.remove('selected'));
-        if (event && event.currentTarget) {
-            event.currentTarget.classList.add('selected');
-        }
-        startDraft();
-    }
-
-    function startDraft() {
         document.getElementById('step-position').classList.add('hidden');
         document.getElementById('step-draft').classList.remove('hidden');
-        renderAttributeList();
-        triggerTeamSpin();
+        renderAttributeProgress();
+        triggerBufferState();
+    }
+
+    // --- NEW BUFFER STATE SYSTEM ---
+    function triggerBufferState() {
+        // Reset Team Visuals
+        document.getElementById('current-spun-team').innerText = "???";
+        document.getElementById('current-spun-team').style.color = "var(--text-muted)";
+        document.getElementById('team-type-tag').innerHTML = "";
+        
+        // Hide Roster
+        document.getElementById('roster-container').classList.add('hidden');
+        document.getElementById('roster-container').innerHTML = "";
+        
+        // Handle Buttons
+        document.getElementById('respin-btn').classList.add('hidden');
+        const spinBtn = document.getElementById('spin-btn-main');
+        spinBtn.innerText = "Press to Spin";
+        spinBtn.classList.remove('hidden');
     }
 
     function triggerTeamSpin() {
-        if (lockedCount >= 16) return;
+        const randIndex = Math.floor(Math.random() * teamsDatabase.length);
+        currentTeam = teamsDatabase[randIndex];
         
-        currentTeam = teamsDatabase[Math.floor(Math.random() * teamsDatabase.length)];
+        // Update Spin Box UI
+        document.getElementById('current-spun-team').innerText = currentTeam.team;
+        document.getElementById('current-spun-team').style.color = "var(--accent-gold)";
+        
+        let tagClass = currentTeam.type === 'classic' ? 'classic-badge' : 'current-badge';
+        document.getElementById('team-type-tag').innerHTML = `<span class="team-banner ${tagClass}">${currentTeam.type} - ${currentTeam.league}</span>`;
+        
+        // Swap Buttons
+        document.getElementById('spin-btn-main').classList.add('hidden');
+        document.getElementById('respin-btn').classList.remove('hidden');
+        
+        renderRoster();
+        
+        // Save current teams for career
         if (currentTeam.type === 'current' && !pulledCurrentTeamsForCareer.includes(currentTeam.team)) {
             pulledCurrentTeamsForCareer.push(currentTeam.team);
         }
-
-        let tagBox = document.getElementById('team-type-tag');
-        if (currentTeam.type === 'classic') {
-            tagBox.innerHTML = `<span class="team-banner classic-badge">★ Classic Squad</span>`;
-        } else {
-            tagBox.innerHTML = `<span class="team-banner current-badge">Current Squad</span>`;
-        }
-
-        document.getElementById('current-spun-team').innerText = currentTeam.team;
-        renderOpenRoster();
     }
-
+    
     function respinTeam() {
-        if (respinsLeft <= 0) return;
-        respinsLeft--;
-        document.getElementById('respin-count-badge').innerText = respinsLeft;
-        if (respinsLeft === 0) {
-            document.getElementById('respin-btn').disabled = true;
+        if (respinsLeft > 0) {
+            respinsLeft--;
+            document.getElementById('respin-count-badge').innerText = respinsLeft;
+            triggerTeamSpin();
+        } else {
+            alert("No respins left!");
         }
-        triggerTeamSpin();
     }
 
-    function renderOpenRoster() {
-        let container = document.getElementById('roster-container');
-        container.classList.remove('hidden');
+    function renderRoster() {
+        const container = document.getElementById('roster-container');
         container.innerHTML = '';
-
-        currentTeam.players.forEach((player, idx) => {
+        container.classList.remove('hidden');
+        
+        currentTeam.players.forEach((player, index) => {
             let div = document.createElement('div');
-            div.className = player.used ? 'player-card-option used' : 'player-card-option';
-            div.innerHTML = `<span><strong>${player.name}</strong></span>`;
-            
-            if (!player.used) {
-                div.onclick = () => pickPlayerForTarget(idx);
-            }
+            div.className = 'player-card-option';
+            div.innerHTML = `<span style="font-weight:600;">${player.name}</span> <span style="font-size: 0.8rem; color: var(--accent-gold); font-weight: bold;">View Stats ➔</span>`;
+            div.onclick = () => openPlayerModal(index);
             container.appendChild(div);
         });
     }
 
-    function setTargetAttribute(attr) {
-        if (playerAttributes[attr].locked) return;
-        selectedAttributeTarget = attr;
-        document.getElementById('target-stat-name').innerText = attr;
-        document.getElementById('active-selection-prompt').classList.remove('hidden');
+    // --- NEW PLAYER STAT MODAL SYSTEM ---
+    function openPlayerModal(playerIndex) {
+        const player = currentTeam.players[playerIndex];
+        document.getElementById('modal-player-name').innerText = player.name;
+        
+        const statList = document.getElementById('modal-stat-list');
+        statList.innerHTML = '';
+        
+        // Build the stat selection grid
+        for (let [statName, rating] of Object.entries(player.ratings)) {
+            let isLocked = playerAttributes[statName].locked;
+            let btn = document.createElement('div');
+            btn.className = 'option-card';
+            
+            if (isLocked) {
+                btn.style.opacity = '0.3';
+                btn.style.cursor = 'not-allowed';
+                btn.innerHTML = `<div style="font-size:0.85rem;">${statName}</div><div style="font-size:1.4rem; color:var(--text-muted);">${rating}</div>`;
+            } else {
+                btn.innerHTML = `<div style="font-size:0.85rem;">${statName}</div><div style="font-size:1.6rem; color:var(--accent-gold);">${rating}</div>`;
+                btn.onclick = () => confirmStatSelection(playerIndex, statName, rating);
+            }
+            statList.appendChild(btn);
+        }
+        
+        document.getElementById('player-modal-overlay').classList.remove('hidden');
     }
 
-    function pickPlayerForTarget(playerIdx) {
-        if (!selectedAttributeTarget) {
-            alert("Please click an unassigned attribute stat box below first to select your Target Stat!");
-            return;
-        }
+    function closePlayerModal() {
+        document.getElementById('player-modal-overlay').classList.add('hidden');
+    }
 
-        let player = currentTeam.players[playerIdx];
-        player.used = true;
-
-        let attr = selectedAttributeTarget;
-        let val = player.ratings[attr];
-
-        playerAttributes[attr] = {
-            val: val,
-            locked: true,
-            source: `${player.name} (${currentTeam.team})`
-        };
-
+    function confirmStatSelection(playerIndex, statName, rating) {
+        const player = currentTeam.players[playerIndex];
+        
+        // Lock the stat
+        playerAttributes[statName].val = rating;
+        playerAttributes[statName].locked = true;
+        playerAttributes[statName].source = player.name;
+        
         lockedCount++;
         document.getElementById('draft-round').innerText = lockedCount;
-
-        selectedAttributeTarget = null;
-        document.getElementById('active-selection-prompt').classList.add('hidden');
-        document.getElementById('target-stat-name').innerText = "None";
-
-        renderAttributeList();
-        renderOpenRoster();
-
+        
+        closePlayerModal();
+        renderAttributeProgress();
+        
         if (lockedCount >= 16) {
             finishDraft();
         } else {
-            triggerTeamSpin();
+            triggerBufferState(); // Instantly wipe screen and go back to empty buffer
         }
     }
 
-    function renderAttributeList() {
-        let listContainer = document.getElementById('attribute-progress-list');
-        listContainer.innerHTML = '';
-
+    function renderAttributeProgress() {
+        const list = document.getElementById('attribute-progress-list');
+        list.innerHTML = '';
+        
         attributesList.forEach(attr => {
-            let item = playerAttributes[attr];
             let div = document.createElement('div');
-            div.className = item.locked ? 'attribute-item locked' : 'attribute-item';
-            
-            let displayContent = item.locked 
-                ? `<span><strong>${attr}</strong><br><small style="color:var(--text-muted);">${item.source}</small></span><span style="font-weight:bold; color:var(--success); font-size:1.1rem;">${item.val}</span>`
-                : `<span><strong>${attr}</strong><br><small style="color:var(--accent-gold);">Click to target</small></span><span style="color:var(--text-muted);">-</span>`;
-
-            div.innerHTML = displayContent;
-            
-            if (!item.locked) {
-                div.onclick = () => setTargetAttribute(attr);
+            div.className = 'attribute-item';
+            if (playerAttributes[attr].locked) {
+                div.classList.add('locked');
+                div.innerHTML = `
+                    <span style="font-weight:bold; color:var(--success);">${attr}</span>
+                    <div style="text-align:right;">
+                        <span style="color:#fff; font-weight:bold; font-size:1.1rem;">${playerAttributes[attr].val}</span>
+                        <div style="font-size:0.7rem; color:var(--text-muted);">${playerAttributes[attr].source}</div>
+                    </div>
+                `;
+            } else {
+                div.innerHTML = `<span>${attr}</span><span style="color:var(--text-muted);">--</span>`;
             }
-            listContainer.appendChild(div);
+            list.appendChild(div);
         });
     }
-
+    
     function finishDraft() {
         document.getElementById('step-draft').classList.add('hidden');
         document.getElementById('step-reveal').classList.remove('hidden');
-
+        
         document.getElementById('reveal-position').innerText = selectedPosition;
-
-        let totalVal = 0;
-        let count = 0;
-        attributesList.forEach(attr => {
-            totalVal += playerAttributes[attr].val;
-            count++;
-        });
-        let avg = Math.round(totalVal / count);
-
-        let grade = 'C';
-        let gradeClass = 'grade-C';
-        if (avg >= 92) { grade = 'S+ ICON'; gradeClass = 'grade-S'; }
-        else if (avg >= 88) { grade = 'S TIER'; gradeClass = 'grade-S'; }
-        else if (avg >= 83) { grade = 'A TIER'; gradeClass = 'grade-A'; }
-        else if (avg >= 78) { grade = 'B TIER'; gradeClass = 'grade-B'; }
-        else { grade = 'C TIER'; gradeClass = 'grade-C'; }
-
-        document.getElementById('reveal-archetype').innerText = `${avg} OVR Master Baller`;
-        let gradeBadge = document.getElementById('reveal-grade');
-        gradeBadge.innerText = grade;
-        gradeBadge.className = `grade-badge ${gradeClass}`;
-
-        let finalContainer = document.getElementById('final-attribute-list');
-        finalContainer.innerHTML = '';
-        attributesList.forEach(attr => {
-            let item = playerAttributes[attr];
-            let div = document.createElement('div');
-            div.className = 'attribute-item locked';
-            div.innerHTML = `<span><strong>${attr}</strong><br><small style="color:var(--text-muted);">${item.source}</small></span><span style="font-weight:bold; color:var(--success); font-size:1.1rem;">${item.val}</span>`;
-            finalContainer.appendChild(div);
-        });
+        
+        let total = 0;
+        for(let a in playerAttributes) { total += playerAttributes[a].val; }
+        let ovr = Math.round(total / 16);
+        
+        let grade = 'F';
+        if (ovr >= 90) grade = 'S';
+        else if (ovr >= 85) grade = 'A';
+        else if (ovr >= 80) grade = 'B';
+        else if (ovr >= 70) grade = 'C';
+        else if (ovr >= 60) grade = 'D';
+        
+        document.getElementById('reveal-grade').className = 'grade-badge grade-' + grade;
+        document.getElementById('reveal-grade').innerText = `${ovr} OVR - TIER ${grade}`;
+        
+        const sortedAttrs = Object.entries(playerAttributes).sort((a,b) => b[1].val - a[1].val);
+        const topAttr = sortedAttrs[0][0];
+        const archMap = {
+            "Pace": "Speed Demon", "Finishing": "Lethal Finisher", "Shot Power": "Cannon",
+            "Long Shots": "Sniper", "Passing": "Maestro", "Vision": "Architect",
+            "Dribbling": "Magician", "Defending": "Brick Wall", "Strength": "Tank"
+        };
+        document.getElementById('reveal-archetype').innerText = archMap[topAttr] || "Complete Baller";
+        
+        const finalList = document.getElementById('final-attribute-list');
+        finalList.innerHTML = document.getElementById('attribute-progress-list').innerHTML;
     }
 
     function startCareerSelection() {
         document.getElementById('step-reveal').classList.add('hidden');
         document.getElementById('step-career-team').classList.remove('hidden');
-
-        let select = document.getElementById('career-team-select');
-        select.innerHTML = '';
-
+        
+        const select = document.getElementById('career-team-select');
+        select.innerHTML = '<option value="">Select a team...</option>';
+        
         if (pulledCurrentTeamsForCareer.length === 0) {
-            pulledCurrentTeamsForCareer.push("Real Madrid (Current)");
+            pulledCurrentTeamsForCareer = ["Default Current Team FC"];
         }
-
+        
         pulledCurrentTeamsForCareer.forEach(teamName => {
             let opt = document.createElement('option');
             opt.value = teamName;
@@ -783,39 +574,34 @@
             select.appendChild(opt);
         });
     }
-
+    
     function simulateSeason() {
+        const team = document.getElementById('career-team-select').value;
+        if(!team) return alert("Please select a team!");
+        
         document.getElementById('step-career-team').classList.add('hidden');
         document.getElementById('step-sim').classList.remove('hidden');
-
-        let club = document.getElementById('career-team-select').value;
-        let goals = Math.floor(Math.random() * 35) + 10;
-        let assists = Math.floor(Math.random() * 25) + 5;
-        let ratingSum = 0;
-        attributesList.forEach(a => ratingSum += playerAttributes[a].val);
-        let avgRating = Math.round(ratingSum / attributesList.length);
-
-        let trophies = [];
-        if (avgRating > 86 && Math.random() > 0.3) trophies.push("League Title 🏆");
-        if (avgRating > 88 && Math.random() > 0.4) trophies.push("Champions League 🇪🇺");
-        if (Math.random() > 0.5) trophies.push("Domestic Cup 🥇");
-        if (avgRating >= 90) trophies.push("Ballon d'Or Winner 🌟");
-
-        let content = `
-            <div style="background:var(--bg-color); padding:20px; border-radius:12px; border:1px solid var(--border-color);">
-                <h3 style="color:var(--accent-gold); margin-top:0;">Career Season with ${club}</h3>
-                <table class="stats-table">
-                    <tr><th>Performance Metric</th><th>Stat Line</th></tr>
-                    <tr><td>Goals Scored</td><td><strong>${goals}</strong></td></tr>
-                    <tr><td>Assists Provided</td><td><strong>${assists}</strong></td></tr>
-                    <tr><td>Average Match Rating</td><td><strong>${(7.4 + (avgRating - 80) * 0.04).toFixed(1)} / 10</strong></td></tr>
-                    <tr><td>Trophies & Honors</td><td><strong>${trophies.length > 0 ? trophies.join(', ') : 'Solid campaign, building for next year.'}</strong></td></tr>
-                </table>
+        
+        let goals = Math.floor(Math.random() * 30) + (selectedPosition === 'Striker' ? 15 : 0);
+        let assists = Math.floor(Math.random() * 20) + (selectedPosition === 'Midfielder' ? 10 : 0);
+        
+        document.getElementById('sim-results-content').innerHTML = `
+            <div style="background: var(--bg-color); padding: 20px; border-radius: 12px; border: 1px solid var(--border-color); text-align: center;">
+                <h3 style="color: var(--accent-gold); margin-top: 0;">Season with ${team}</h3>
+                <div style="display: flex; justify-content: space-around; margin: 20px 0;">
+                    <div>
+                        <div style="font-size: 2.5rem; font-weight: bold; color: var(--success);">${goals}</div>
+                        <div style="color: var(--text-muted); font-size: 1.1rem;">Goals</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 2.5rem; font-weight: bold; color: #3b82f6;">${assists}</div>
+                        <div style="color: var(--text-muted); font-size: 1.1rem;">Assists</div>
+                    </div>
+                </div>
+                <p style="color: var(--text-muted); font-style: italic;">The fans will remember your legendary debut season!</p>
             </div>
         `;
-        document.getElementById('sim-results-content').innerHTML = content;
     }
 </script>
-
 </body>
 </html>
