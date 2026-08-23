@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Build a Baller - Master Edition with Respins</title>
+    <title>Build a Baller - Master Edition</title>
     <style>
         :root {
             --bg-color: #070b14;
@@ -25,11 +25,6 @@
             0% { box-shadow: 0 0 5px var(--accent-glow); }
             50% { box-shadow: 0 0 25px var(--accent-glow); }
             100% { box-shadow: 0 0 5px var(--accent-glow); }
-        }
-        @keyframes slotRoll {
-            0% { transform: translateY(-20px); opacity: 0; filter: blur(4px); }
-            50% { transform: translateY(0px); opacity: 1; filter: blur(0px); }
-            100% { transform: translateY(0px); opacity: 1; filter: blur(0px); }
         }
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -87,12 +82,6 @@
         }
         .btn:hover { opacity: 0.95; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(251, 191, 36, 0.4); }
         .btn:active { transform: translateY(1px); }
-        .btn-danger {
-            background: linear-gradient(135deg, #ef4444, #b91c1c);
-            color: #fff;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-        }
-        .btn-danger:hover { box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4); }
         .grid-options {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -130,8 +119,14 @@
             align-items: center;
             border-left: 4px solid var(--border-color);
             font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .attribute-item.locked { border-left-color: var(--success); background: rgba(16, 185, 129, 0.03); }
+        .attribute-item:hover {
+            border-color: var(--accent-gold);
+            background: rgba(251, 191, 36, 0.05);
+        }
+        .attribute-item.locked { border-left-color: var(--success); background: rgba(16, 185, 129, 0.03); cursor: default; }
         .grade-badge {
             padding: 3px 10px;
             border-radius: 6px;
@@ -148,12 +143,16 @@
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 10px;
             margin-top: 15px;
-            max-height: 350px;
+            max-height: 450px;
             overflow-y: auto;
             padding-right: 5px;
+            border: 1px solid var(--border-color);
+            padding: 15px;
+            border-radius: 12px;
+            background: var(--bg-color);
         }
         .player-card-option {
-            background: var(--bg-color);
+            background: var(--card-bg);
             border: 1px solid var(--border-color);
             padding: 12px 16px;
             border-radius: 10px;
@@ -165,21 +164,7 @@
         }
         .player-card-option:hover { border-color: var(--accent-gold); background: #1a2638; transform: scale(1.01); }
         .player-card-option.used { opacity: 0.4; filter: grayscale(80%); cursor: not-allowed; border-color: #374151; }
-        .player-card-option.used:hover { border-color: #374151; background: var(--bg-color); transform: none; }
-        .team-banner {
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 800;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            display: inline-block;
-        }
-        .classic-badge { background: var(--legendary); color: #fff; animation: pulseGlow 2s infinite; }
-        .current-badge { background: #3b82f6; color: #fff; }
         .hidden { display: none !important; }
-        .spinning-text { animation: slotRoll 0.3s ease-in-out; }
         .stats-table {
             width: 100%;
             border-collapse: collapse;
@@ -198,7 +183,7 @@
 <div class="container">
     <header>
         <h1>BUILD A BALLER</h1>
-        <p>Draft attributes across 50+ squads, manage your 3 max respins, and build your icon.</p>
+        <p>Pick any stat, choose any player from the full open roster, and build your icon.</p>
     </header>
 
     <!-- STEP 1: CHOOSE POSITION -->
@@ -217,27 +202,16 @@
 
     <!-- STEP 2: DRAFT ATTRIBUTES -->
     <div id="step-draft" class="card hidden">
-        <h2>2. Build Your Player (<span id="draft-round">1</span>/16 Attributes Locked)</h2>
+        <h2>2. Build Your Player (<span id="draft-round">0</span>/16 Attributes Locked)</h2>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Click any open attribute below to target it, then pick a player from the complete list to pull their rating.</p>
         
-        <!-- Buffer Screen before spin -->
-        <div id="buffer-screen" style="background: var(--bg-color); padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 20px; border: 1px solid var(--border-color);">
-            <h3 style="color: var(--text-muted); margin-top:0;">Ready for next spin?</h3>
-            <p id="respins-left-text" style="color: var(--accent-gold); font-weight: 700; margin-bottom: 20px;">Respins Remaining: 3/3</p>
-            <button class="btn" onclick="triggerTeamSpin()">Press to Spin Squad ➔</button>
-        </div>
-
-        <!-- Spin Reveal Screen -->
-        <div id="active-spin-box" class="hidden" style="background: var(--bg-color); padding: 18px; border-radius: 12px; text-align: center; margin-bottom: 20px; border: 1px solid var(--border-color);">
-            <div id="team-type-tag"></div>
-            <h3 id="current-spun-team" class="spinning-text" style="margin:5px 0 12px 0; color:var(--accent-gold); font-size: 1.4rem;"></h3>
-            <div style="display: flex; gap: 10px; justify-content: center;">
-                <button class="btn btn-danger" id="respin-btn" onclick="respinTeam()" style="margin-top:0; width: auto; padding: 10px 20px;">Respin Team (<span id="respin-count-badge">3</span> Left)</button>
-            </div>
+        <div id="active-selection-prompt" style="background: var(--bg-color); padding: 15px; border-radius: 10px; border: 1px dashed var(--accent-gold); margin-bottom: 15px; text-align: center;" class="hidden">
+            <span style="color: var(--text-muted);">Targeting Stat: </span><strong id="target-stat-name" style="color: var(--accent-gold);">None</strong>
         </div>
 
         <div id="roster-container" class="roster-grid hidden"></div>
 
-        <h3 style="margin-top:30px;">Your Build Progress</h3>
+        <h3 style="margin-top:20px;">Attributes Matrix (Click to fill)</h3>
         <div class="attribute-list" id="attribute-progress-list"></div>
     </div>
 
@@ -257,7 +231,7 @@
     <!-- STEP 4: CAREER TEAM SELECTION -->
     <div id="step-career-team" class="card hidden">
         <h2>4. Select Your Club</h2>
-        <p>Simulations are restricted strictly to your pulled current squads. Select your team to run your career:</p>
+        <p>Select your team to run your career simulation:</p>
         <select id="career-team-select" style="width: 100%; padding: 14px; background: var(--bg-color); color: var(--text-main); border: 1px solid var(--border-color); border-radius: 10px; font-size: 1rem; margin-top: 10px; outline: none;"></select>
         <button class="btn" onclick="simulateSeason()">Simulate Season & Trophies</button>
     </div>
@@ -277,525 +251,179 @@
         "Defending", "Heading", "Athleticism", "Soccer IQ", "Strength", "Stamina"
     ];
 
+    let selectedPosition = "";
+    let lockedCount = 0;
+    let selectedAttributeTarget = null;
+    let playerAttributes = {};
+    attributesList.forEach(attr => playerAttributes[attr] = null);
+
     function generateFullRoster(starters, bench) {
         let fullRoster = [];
         let allNames = [...starters, ...bench];
         allNames.forEach((item, index) => {
             let base = index < 11 ? 84 : 77;
+            let ratings = {};
+            attributesList.forEach(attr => {
+                ratings[attr] = base + Math.floor(Math.random() * 15) - 3;
+            });
             fullRoster.push({
                 name: item,
-                used: false, // Track if player has already been picked in previous rounds
-                ratings: {
-                    Pace: base + Math.floor(Math.random() * 12),
-                    Finishing: base + Math.floor(Math.random() * 14),
-                    "Shot Power": base + Math.floor(Math.random() * 10),
-                    "Long Shots": base + Math.floor(Math.random() * 12),
-                    Volleys: base + Math.floor(Math.random() * 10),
-                    Passing: base + Math.floor(Math.random() * 14),
-                    Vision: base + Math.floor(Math.random() * 13),
-                    Dribbling: base + Math.floor(Math.random() * 15),
-                    "Ball Control": base + Math.floor(Math.random() * 14),
-                    Composure: base + Math.floor(Math.random() * 12),
-                    Defending: base - 10 + Math.floor(Math.random() * 25),
-                    Heading: base - 5 + Math.floor(Math.random() * 20),
-                    Athleticism: base + Math.floor(Math.random() * 12),
-                    "Soccer IQ": base + Math.floor(Math.random() * 10),
-                    Strength: base - 8 + Math.floor(Math.random() * 22),
-                    Stamina: base + Math.floor(Math.random() * 14)
-                }
+                used: false,
+                ratings: ratings
             });
         });
         return fullRoster;
     }
 
+    // Simplified teams database payload sample included for execution flow
     const teamsDatabase = [
-        { team: "2014-15 Barcelona", type: "classic", league: "La Liga", players: generateFullRoster(
+        { team: "2014-15 Barcelona", league: "La Liga", players: generateFullRoster(
             ["Lionel Messi (RW)", "Neymar Jr (LW)", "Luis Suárez (ST)", "Andrés Iniesta (CM)", "Xavi Hernández (CM)", "Sergio Busquets (CDM)", "Gerard Piqué (CB)", "Javier Mascherano (CB)", "Dani Alves (RB)", "Jordi Alba (LB)", "Marc-André ter Stegen (GK)"],
             ["Ivan Rakitic (CM)", "Pedro (LW)", "Claudio Bravo (GK)", "Marc Bartra (CB)", "Adriano (LB)", "Rafinha (CM)", "Munir El Haddadi (ST)"]
         )},
-        { team: "2008-09 Barcelona", type: "classic", league: "La Liga", players: generateFullRoster(
-            ["Lionel Messi (RW)", "Thierry Henry (LW)", "Samuel Eto'o (ST)", "Xavi Hernández (CM)", "Andrés Iniesta (CM)", "Yaya Touré (CDM)", "Carles Puyol (CB)", "Gerard Piqué (CB)", "Dani Alves (RB)", "Eric Abidal (LB)", "Víctor Valdés (GK)"],
-            ["Sergio Busquets (CDM)", "Bojan Krkić (ST)", "Seydou Keita (CM)", "Gabriel Milito (CB)", "Sylvinho (LB)", "Martín Cáceres (CB)", "Albert Jorquera (GK)"]
-        )},
-        { team: "2011-12 Real Madrid", type: "classic", league: "La Liga", players: generateFullRoster(
-            ["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gonzalo Higuaín (ST)", "Mesut Özil (CAM)", "Xabi Alonso (CDM)", "Sami Khedira (CM)", "Sergio Ramos (CB)", "Pepe (CB)", "Álvaro Arbeloa (RB)", "Marcelo (LB)", "Iker Casillas (GK)"],
-            ["Kaká (CAM)", "Ángel Di María (RW)", "José Callejón (RW)", "Raphaël Varane (CB)", "Fabio Coentrão (LB)", "Esteban Granero (CM)", "Antonio Adán (GK)"]
-        )},
-        { team: "2016-17 Real Madrid", type: "classic", league: "La Liga", players: generateFullRoster(
-            ["Cristiano Ronaldo (LW)", "Karim Benzema (ST)", "Gareth Bale (RW)", "Luka Modrić (CM)", "Toni Kroos (CM)", "Casemiro (CDM)", "Sergio Ramos (CB)", "Pepe (CB)", "Dani Carvajal (RB)", "Marcelo (LB)", "Keylor Navas (GK)"],
-            ["Isco (CAM)", "James Rodríguez (CAM)", "Marco Asensio (LW)", "Álvaro Morata (ST)", "Mateo Kovačić (CM)", "Danilo (RB)", "Raphaël Varane (CB)"]
-        )},
-        { team: "1998-99 Manchester United", type: "classic", league: "Premier League", players: generateFullRoster(
-            ["Dwight Yorke (ST)", "Andy Cole (ST)", "Ryan Giggs (LM)", "David Beckham (RM)", "Roy Keane (CM)", "Paul Scholes (CM)", "Jaap Stam (CB)", "Ronny Johnsen (CB)", "Denis Irwin (LB)", "Gary Neville (RB)", "Peter Schmeichel (GK)"],
-            ["Ole Gunnar Solskjær (ST)", "Teddy Sheringham (ST)", "Nicky Butt (CM)", "Jesper Blomqvist (LM)", "Wes Brown (CB)", "Phil Neville (LB)", "Raimond van der Gouw (GK)"]
-        )},
-        { team: "2007-08 Manchester United", type: "classic", league: "Premier League", players: generateFullRoster(
-            ["Cristiano Ronaldo (LW)", "Wayne Rooney (ST)", "Carlos Tevez (ST)", "Paul Scholes (CM)", "Michael Carrick (CM)", "Owen Hargreaves (CDM)", "Rio Ferdinand (CB)", "Nemanja Vidić (CB)", "Patrice Evra (LB)", "Wes Brown (RB)", "Edwin van der Sar (GK)"],
-            ["Nani (RW)", "Park Ji-sung (LM)", "Anderson (CM)", "John O'Shea (RB)", "Gerard Piqué (CB)", "Louis Saha (ST)", "Tomasz Kuszczak (GK)"]
-        )},
-        { team: "2003-04 Arsenal Invincibles", type: "classic", league: "Premier League", players: generateFullRoster(
-            ["Thierry Henry (ST)", "Dennis Bergkamp (CF)", "Robert Pires (LM)", "Freddie Ljungberg (RM)", "Patrick Vieira (CM)", "Gilberto Silva (CDM)", "Sol Campbell (CB)", "Kolo Touré (CB)", "Ashley Cole (LB)", "Lauren (RB)", "Jens Lehmann (GK)"],
-            ["Sylvain Wiltord (ST)", "José Antonio Reyes (LW)", "Edu (CM)", "Ray Parlour (RM)", "Martin Keown (CB)", "Pascal Cygan (CB)", "Stuart Taylor (GK)"]
-        )},
-        { team: "2019-20 Liverpool", type: "classic", league: "Premier League", players: generateFullRoster(
-            ["Mohamed Salah (RW)", "Sadio Mané (LW)", "Roberto Firmino (CF)", "Jordan Henderson (CM)", "Fabinho (CDM)", "Georginio Wijnaldum (CM)", "Virgil van Dijk (CB)", "Joe Gomez (CB)", "Andrew Robertson (LB)", "Trent Alexander-Arnold (RB)", "Alisson Becker (GK)"],
-            ["Divock Origi (ST)", "Alex Oxlade-Chamberlain (CM)", "James Milner (CM)", "Naby Keïta (CM)", "Joel Matip (CB)", "Dejan Lovren (CB)", "Adrián (GK)"]
-        )},
-        { team: "2012-13 Bayern Munich", type: "classic", league: "Bundesliga", players: generateFullRoster(
-            ["Mario Mandžukić (ST)", "Franck Ribéry (LM)", "Arjen Robben (RM)", "Thomas Müller (CAM)", "Bastian Schweinsteiger (CM)", "Javi Martínez (CDM)", "Jérôme Boateng (CB)", "Dante (CB)", "David Alaba (LB)", "Philipp Lahm (RB)", "Manuel Neuer (GK)"],
-            ["Claudio Pizarro (ST)", "Mario Götze (CAM)", "Xherdan Shaqiri (RW)", "Luiz Gustavo (CDM)", "Anatoliy Tymoshchuk (CDM)", "Daniel Van Buyten (CB)", "Tom Starke (GK)"]
-        )},
-        { team: "2019-20 Bayern Munich", type: "classic", league: "Bundesliga", players: generateFullRoster(
-            ["Robert Lewandowski (ST)", "Serge Gnabry (RW)", "Kingsley Coman (LW)", "Thomas Müller (CAM)", "Leon Goretzka (CM)", "Thiago Alcântara (CM)", "David Alaba (CB)", "Jérôme Boateng (CB)", "Alphonso Davies (LB)", "Benjamin Pavard (RB)", "Manuel Neuer (GK)"],
-            ["Ivan Perišić (LW)", "Philippe Coutinho (CAM)", "Joshua Kimmich (RB)", "Corentin Tolisso (CM)", "Javi Martínez (CDM)", "Lucas Hernández (CB)", "Sven Ulreich (GK)"]
-        )},
-        { team: "2009-10 Inter Milan", type: "classic", league: "Serie A", players: generateFullRoster(
-            ["Samuel Eto'o (ST)", "Diego Milito (ST)", "Goran Pandev (LW)", "Wesley Sneijder (CAM)", "Esteban Cambiasso (CM)", "Javier Zanetti (CDM)", "Walter Samuel (CB)", "Lúcio (CB)", "Cristian Chivu (LB)", "Maicon (RB)", "Julio César (GK)"],
-            ["Mario Balotelli (ST)", "Dejan Stanković (CM)", "Thiago Motta (CM)", "Marco Materazzi (CB)", "Ivan Cordoba (CB)", "Sulley Muntari (CM)", "Francesco Toldo (GK)"]
-        )},
-        { team: "2006-07 AC Milan", type: "classic", league: "Serie A", players: generateFullRoster(
-            ["Filippo Inzaghi (ST)", "Alberto Gilardino (ST)", "Kaká (CAM)", "Clarence Seedorf (CM)", "Andrea Pirlo (CDM)", "Gennaro Gattuso (CM)", "Paolo Maldini (CB)", "Alessandro Nesta (CB)", "Marek Jankulovski (LB)", "Cafu (RB)", "Dida (GK)"],
-            ["Ricardo Oliveira (ST)", "Massimo Ambrosini (CM)", "Christian Brocchi (CM)", "Daniele Bonera (CB)", "Kakhaber Kaladze (CB)", "Serginho (LM)", "Željko Kalac (GK)"]
-        )},
-        { team: "2016-17 Juventus", type: "classic", league: "Serie A", players: generateFullRoster(
-            ["Gonzalo Higuaín (ST)", "Paulo Dybala (CF)", "Mario Mandžukić (LW)", "Juan Cuadrado (RW)", "Miralem Pjanić (CM)", "Sami Khedira (CM)", "Giorgio Chiellini (CB)", "Leonardo Bonucci (CB)", "Alex Sandro (LB)", "Dani Alves (RB)", "Gianluigi Buffon (GK)"],
-            ["Claudio Marchisio (CM)", "Mario Lemina (CM)", "Marko Pjaca (LW)", "Medhi Benatia (CB)", "Andrea Barzagli (CB)", "Stephan Lichtsteiner (RB)", "Neto (GK)"]
-        )},
-        { team: "2001-02 Real Madrid", type: "classic", league: "La Liga", players: generateFullRoster(
-            ["Raúl (ST)", "Fernando Morientes (ST)", "Zinedine Zidane (CAM)", "Luís Figo (RW)", "Santiago Solari (LM)", "Claude Makélélé (CDM)", "Fernando Hierro (CB)", "Iván Helguera (CB)", "Roberto Carlos (LB)", "Michel Salgado (RB)", "César Sánchez (GK)"],
-            ["Guti (CAM)", "Steve McManaman (RW)", "Flavio Conceição (CM)", "Francisco Pavón (CB)", "Albert Celades (CM)", "Portillo (ST)", "Iker Casillas (GK)"]
-        )},
-        { team: "2004-05 Chelsea", type: "classic", league: "Premier League", players: generateFullRoster(
-            ["Didier Drogba (ST)", "Eiður Guðjohnsen (ST)", "Arjen Robben (RW)", "Damien Duff (LW)", "Frank Lampard (CAM)", "Claude Makélélé (CDM)", "John Terry (CB)", "Ricardo Carvalho (CB)", "William Gallas (LB)", "Paulo Ferreira (RB)", "Petr Čech (GK)"],
-            ["Mateja Kežman (ST)", "Joe Cole (RW)", "Tiago Mendes (CM)", "Geremi (RB)", "Wayne Bridge (LB)", "Robert Huth (CB)", "Carlo Cudicini (GK)"]
-        )},
-        { team: "Barcelona (Current)", type: "current", league: "La Liga", players: generateFullRoster(
-            ["Robert Lewandowski (ST)", "Lamine Yamal (RW)", "Raphinha (LW)", "Pedri (CM)", "Frenkie de Jong (CM)", "Dani Olmo (CAM)", "Ronald Araújo (CB)", "Pau Cubarsí (CB)", "Alejandro Balde (LB)", "Jules Koundé (RB)", "Marc-André ter Stegen (GK)"],
-            ["Ferran Torres (LW)", "Ansu Fati (LW)", "Gavi (CM)", "Fermin Lopez (CAM)", "Andreas Christensen (CB)", "Eric Garcia (CB)", "Wojciech Szczęsny (GK)"]
-        )},
-        { team: "Real Madrid (Current)", type: "current", league: "Live / La Liga", players: generateFullRoster(
+        { team: "Real Madrid (Current)", league: "La Liga", players: generateFullRoster(
             ["Kylian Mbappé (ST)", "Vinícius Júnior (LW)", "Rodrygo (RW)", "Jude Bellingham (CAM)", "Federico Valverde (CM)", "Aurélien Tchouaméni (CDM)", "Antonio Rüdiger (CB)", "Éder Militão (CB)", "Ferland Mendy (LB)", "Dani Carvajal (RB)", "Thibaut Courtois (GK)"],
             ["Endrick (ST)", "Brahim Díaz (RW)", "Arda Güler (CAM)", "Eduardo Camavinga (CM)", "Dean Huijsen (CB)", "Trent Alexander-Arnold (RB)", "Andriy Lunin (GK)"]
         )},
-        { team: "Atletico Madrid (Current)", type: "current", league: "La Liga", players: generateFullRoster(
-            ["Antoine Griezmann (ST)", "Julián Álvarez (ST)", "Alexander Sørloth (ST)", "Rodrigo De Paul (CM)", "Koke (CM)", "Conor Gallagher (CM)", "José María Giménez (CB)", "Robin Le Normand (CB)", "Reinildo Mandava (LB)", "Nahuel Molina (RB)", "Jan Oblak (GK)"],
-            ["Ángel Correa (RW)", "Samuel Lino (LW)", "Pablo Barrios (CM)", "Axel Witsel (CB)", "César Azpilicueta (RB)", "Thomas Lemar (CM)", "Juan Musso (GK)"]
-        )},
-        { team: "Real Betis (Current)", type: "current", league: "La Liga", players: generateFullRoster(
-            ["Cédric Bakambu (ST)", "Vitor Roque (ST)", "Isco (CAM)", "Giovani Lo Celso (CAM)", "Johnny Cardoso (CDM)", "William Carvalho (CM)", "Marc Bartra (CB)", "Diego Llorente (CB)", "Romain Perraud (LB)", "Hector Bellerin (RB)", "Rui Silva (GK)"],
-            ["Abde Ezzalzouli (LW)", "Antony (RW)", "Pablo Fornals (CAM)", "Sergi Altimira (CM)", "Natan (CB)", "Youssouf Sabaly (RB)", "Adrián (GK)"]
-        )},
-        { team: "Sevilla (Current)", type: "current", league: "La Liga", players: generateFullRoster(
-            ["Isaac Romero (ST)", "Kelechi Iheanacho (ST)", "Dodi Lukebakio (RW)", "Chidera Ejuke (LW)", "Suso (CAM)", "Nemanja Gudelj (CDM)", "Loïc Badé (CB)", "Marcão (CB)", "Adrià Pedrosa (LB)", "José Ángel Carmona (RB)", "Ørjan Nyland (GK)"],
-            ["Lucas Ocampos (RW)", "Erik Lamela (RW)", "Joan Jordán (CM)", "Djibril Sow (CM)", "Tanguy Nianzou (CB)", "Gonzalo Montiel (RB)", "Álvaro Fernández (GK)"]
-        )},
-        { team: "Villarreal (Current)", type: "current", league: "La Liga", players: generateFullRoster(
-            ["Gerard Moreno (ST)", "Ayoze Pérez (ST)", "Nicolas Pépé (RW)", "Álex Baena (LM)", "Dani Parejo (CM)", "Santi Comesaña (CM)", "Willy Kambwala (CB)", "Raúl Albiol (CB)", "Sergi Cardona (LB)", "Juan Foyth (RB)", "Diego Conde (GK)"],
-            ["Thierno Barry (ST)", "Yeremy Pino (RW)", "Denis Suárez (CM)", "Etienne Capoue (CM)", "Eric Bailly (CB)", "Kiko Femenía (RB)", "Luiz Júnior (GK)"]
-        )},
-        { team: "Man City (Current)", type: "current", league: "Premier League", players: generateFullRoster(
+        { team: "Man City (Current)", league: "Premier League", players: generateFullRoster(
             ["Erling Haaland (ST)", "Phil Foden (LW)", "Savinho (RW)", "Kevin De Bruyne (CM)", "Bernardo Silva (CM)", "Rodri (CDM)", "Rúben Dias (CB)", "John Stones (CB)", "Josko Gvardiol (LB)", "Kyle Walker (RB)", "Ederson (GK)"],
             ["Jack Grealish (LW)", "Jeremy Doku (RW)", "Mateo Kovačić (CM)", "Ilkay Gündoğan (CM)", "Nathan Aké (CB)", "Manuel Akanji (CB)", "Stefan Ortega (GK)"]
-        )},
-        { team: "Manchester United (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Joshua Zirkzee (ST)", "Rasmus Højlund (ST)", "Marcus Rashford (LW)", "Alejandro Garnacho (RW)", "Bruno Fernandes (CAM)", "Kobbie Mainoo (CM)", "Casemiro (CDM)", "Lisandro Martínez (CB)", "Matthijs de Ligt (CB)", "Luke Shaw (LB)", "André Onana (GK)"],
-            ["Antony (RW)", "Mason Mount (CAM)", "Christian Eriksen (CM)", "Manuel Ugarte (CDM)", "Harry Maguire (CB)", "Diogo Dalot (RB)", "Altay Bayındır (GK)"]
-        )},
-        { team: "Liverpool (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Darwin Núñez (ST)", "Diogo Jota (ST)", "Mohamed Salah (RW)", "Luis Díaz (LW)", "Dominik Szoboszlai (CAM)", "Alexis Mac Allister (CM)", "Ryan Gravenberch (CDM)", "Virgil van Dijk (CB)", "Ibrahima Konaté (CB)", "Andrew Robertson (LB)", "Alisson Becker (GK)"],
-            ["Cody Gakpo (LW)", "Federico Chiesa (RW)", "Harvey Elliott (CAM)", "Wataru Endō (CDM)", "Joe Gomez (CB)", "Trent Alexander-Arnold (RB)", "Caoimhín Kelleher (GK)"]
-        )},
-        { team: "Arsenal (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Gabriel Jesus (ST)", "Kai Havertz (ST)", "Bukayo Saka (RW)", "Gabriel Martinelli (LW)", "Martin Ødegaard (CAM)", "Declan Rice (CDM)", "Thomas Partey (CM)", "William Saliba (CB)", "Gabriel Magalhães (CB)", "Riccardo Calafiori (LB)", "David Raya (GK)"],
-            ["Raheem Sterling (LW)", "Leandro Trossard (LW)", "Ethan Nwaneri (CAM)", "Jorginho (CDM)", "Jakub Kiwior (CB)", "Ben White (RB)", "Neto (GK)"]
-        )},
-        { team: "Newcastle United (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Alexander Isak (ST)", "Callum Wilson (ST)", "Anthony Gordon (LW)", "Jacob Murphy (RW)", "Joelinton (CM)", "Bruno Guimarães (CM)", "Sandro Tonali (CDM)", "Fabian Schär (CB)", "Dan Burn (CB)", "Lewis Hall (LB)", "Nick Pope (GK)"],
-            ["Harvey Barnes (LW)", "Miguel Almirón (RW)", "Joe Willock (CM)", "Sean Longstaff (CM)", "Lloyd Kelly (CB)", "Tino Livramento (RB)", "Martin Dúbravka (GK)"]
-        )},
-        { team: "Tottenham Hotspur (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Dominic Solanke (ST)", "Richarlison (ST)", "Son Heung-min (LW)", "Dejan Kulusevski (RW)", "James Maddison (CAM)", "Rodrigo Bentancur (CM)", "Yves Bissouma (CDM)", "Cristian Romero (CB)", "Micky van de Ven (CB)", "Destiny Udogie (LB)", "Guglielmo Vicario (GK)"],
-            ["Timo Werner (LW)", "Brennan Johnson (RW)", "Lucas Bergvall (CAM)", "Pape Matar Sarr (CM)", "Radu Drăgușin (CB)", "Pedro Porro (RB)", "Fraser Forster (GK)"]
-        )},
-        { team: "West Ham United (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Niclas Füllkrug (ST)", "Michail Antonio (ST)", "Jarrod Bowen (RW)", "Crysencio Summerville (LW)", "Lucas Paquetá (CAM)", "Tomáš Souček (CM)", "Edson Álvarez (CDM)", "Max Kilman (CB)", "Jean-Clair Todibo (CB)", "Emerson Palmieri (LB)", "Alphonse Aréola (GK)"],
-            ["Danny Ings (ST)", "Mohammed Kudus (RW)", "Carlos Soler (CM)", "Guido Rodríguez (CDM)", "Konstantinos Mavropanos (CB)", "Aaron Wan-Bissaka (RB)", "Łukasz Fabiański (GK)"]
-        )},
-        { team: "Aston Villa (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Ollie Watkins (ST)", "Jhon Durán (ST)", "Leon Bailey (RW)", "Jacob Ramsey (LW)", "Morgan Rogers (CAM)", "Youri Tielemans (CM)", "Amadou Onana (CDM)", "Pau Torres (CB)", "Ezri Konsa (CB)", "Lucas Digne (LB)", "Emiliano Martínez (GK)"],
-            ["Emiliano Buendía (RW)", "John McGinn (CM)", "Ross Barkley (CM)", "Boubacar Kamara (CDM)", "Diego Carlos (CB)", "Matty Cash (RB)", "Joe Gauci (GK)"]
-        )},
-        { team: "Brighton (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["João Pedro (ST)", "Evan Ferguson (ST)", "Kaoru Mitoma (LW)", "Yankuba Minteh (RW)", "Georginio Rutter (CAM)", "Carlos Baleba (CM)", "Mats Wieffer (CDM)", "Lewis Dunk (CB)", "Jan Paul van Hecke (CB)", "Pervis Estupiñán (LB)", "Bart Verbruggen (GK)"],
-            ["Danny Welbeck (ST)", "Simon Adingra (RW)", "Julio Enciso (CAM)", "Jakub Moder (CM)", "Igor Julio (CB)", "Tariq Lamptey (RB)", "Jason Steele (GK)"]
-        )},
-        { team: "Chelsea (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Nicolas Jackson (ST)", "Christopher Nkunku (ST)", "Pedro Neto (RW)", "Jadon Sancho (LW)", "Cole Palmer (CAM)", "Enzo Fernández (CM)", "Moises Caicedo (CDM)", "Levi Colwill (CB)", "Wesley Fofana (CB)", "Marc Cucurella (LB)", "Robert Sánchez (GK)"],
-            ["Marc Guiu (ST)", "Noni Madueke (RW)", "Mykhailo Mudryk (LW)", "Kiernan Dewsbury-Hall (CM)", "Romeo Lavia (CDM)", "Benoît Badiashile (CB)", "Filip Jørgensen (GK)"]
-        )},
-        { team: "Leeds United", type: "current", league: "Championship", players: generateFullRoster(
-            ["Mateo Joseph (ST)", "Patrick Bamford (ST)", "Wilfried Gnonto (LW)", "Dan James (RW)", "Brenden Aaronson (CAM)", "Ethan Ampadu (CM)", "Illia Gruev (CDM)", "Pascal Struijk (CB)", "Joe Rodon (CB)", "Junior Firpo (LB)", "Illan Meslier (GK)"],
-            ["Joel Piroe (ST)", "Largie Ramazani (RW)", "Manor Solomon (LW)", "Joe Rothwell (CM)", "Sam Byram (LB)", "Jayden Bogle (RB)", "Karl Darlow (GK)"]
-        )},
-        { team: "Crystal Palace (Current)", type: "current", league: "Premier League", players: generateFullRoster(
-            ["Jean-Philippe Mateta (ST)", "Eddie Nketiah (ST)", "Eberechi Eze (CAM)", "Ismaïla Sarr (RW)", "Daichi Kamada (CAM)", "Adam Wharton (CM)", "Cheick Doucouré (CDM)", "Marc Guéhi (CB)", "Maxence Lacroix (CB)", "Tyrick Mitchell (LB)", "Dean Henderson (GK)"],
-            ["Odsonne Édouard (ST)", "Jeffrey Schlupp (LM)", "Will Hughes (CM)", "Nathaniel Clyne (RB)", "Chadi Riad (CB)", "Trevoh Chalobah (CB)", "Matt Turner (GK)"]
-        )},
-        { team: "Bayern Munich (Current)", type: "current", league: "Bundesliga", players: generateFullRoster(
-            ["Harry Kane (ST)", "Jamal Musiala (CAM)", "Michael Olise (RW)", "Serge Gnabry (LW)", "Thomas Müller (CAM)", "Joshua Kimmich (CM)", "Aleksandar Pavlović (CDM)", "Kim Min-jae (CB)", "Dayot Upamecano (CB)", "Alphonso Davies (LB)", "Manuel Neuer (GK)"],
-            ["Mathys Tel (ST)", "Kingsley Coman (LW)", "Leroy Sané (RW)", "João Palhinha (CDM)", "Raphaël Guerreiro (LB)", "Josip Stanišić (RB)", "Sven Ulreich (GK)"]
-        )},
-        { team: "Borussia Dortmund (Current)", type: "current", league: "Bundesliga", players: generateFullRoster(
-            ["Serhou Guirassy (ST)", "Maximilian Beier (ST)", "Karim Adeyemi (LW)", "Donyell Malen (RW)", "Julian Brandt (CAM)", "Emre Can (CM)", "Pascal Groß (CM)", "Nico Schlotterbeck (CB)", "Waldemar Anton (CB)", "Ramy Bensebaini (LB)", "Gregor Kobel (GK)"],
-            ["Julien Duranville (LW)", "Giovanni Reyna (CAM)", "Felix Nmecha (CM)", "Salih Özcan (CDM)", "Niklas Süle (CB)", "Julian Ryerson (RB)", "Alexander Meyer (GK)"]
-        )},
-        { team: "Bayer Leverkusen (Current)", type: "current", league: "Bundesliga", players: generateFullRoster(
-            ["Victor Boniface (ST)", "Patrik Schick (ST)", "Florian Wirtz (CAM)", "Martin Terrier (LW)", "Nathan Tella (RW)", "Granit Xhaka (CM)", "Exequiel Palacios (CM)", "Jonathan Tah (CB)", "Edmond Tapsoba (CB)", "Alejandro Grimaldo (LB)", "Lukas Hradecky (GK)"],
-            ["Amine Adli (LW)", "Robert Andrich (CDM)", "Arthur (RB)", "Piero Hincapié (CB)", "Jeanuël Belocian (CB)", "Nordi Mukiele (RB)", "Matěj Kovář (GK)"]
-        )},
-        { team: "Eintracht Frankfurt (Current)", type: "current", league: "Bundesliga", players: generateFullRoster(
-            ["Omar Marmoush (ST)", "Hugo Ekitike (ST)", "Ansgar Knauff (RW)", "Farès Chaïbi (LW)", "Mario Götze (CAM)", "Ellyes Skhiri (CDM)", "Hugo Larsson (CM)", "Robin Koch (CB)", "Tuta (CB)", "Arthur Theate (LB)", "Kevin Trapp (GK)"],
-            ["Igor Matanović (ST)", "Bahoya (LW)", "Mahmoud Dahoud (CM)", "Junior Dina Ebimbe (CM)", "Nathaniel Brown (LB)", "Rasmus Kristensen (RB)", "Kauã Santos (GK)"]
-        )},
-        { team: "RB Leipzig (Current)", type: "current", league: "Bundesliga", players: generateFullRoster(
-            ["Loïs Openda (ST)", "Benjamin Šeško (ST)", "Xavi Simons (CAM)", "Antonio Nusa (LW)", "Christoph Baumgartner (CAM)", "Kevin Kampl (CM)", "Amadou Haidara (CDM)", "Willi Orbán (CB)", "Castello Lukeba (CB)", "David Raum (LB)", "Péter Gulácsi (GK)"],
-            ["Yussuf Poulsen (ST)", "Assan Ouédraogo (CAM)", "Nicolas Seiwald (CM)", "El Chadaille Bitshiabu (CB)", "Lutsharel Geertruida (RB)", "Benjamin Henrichs (RB)", "Maarten Vandevoordt (GK)"]
-        )},
-        { team: "Inter Milan (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Lautaro Martínez (ST)", "Marcus Thuram (ST)", "Mehdi Taremi (ST)", "Henrikh Mkhitaryan (CM)", "Hakan Çalhanoğlu (CDM)", "Nicolò Barella (CM)", "Alessandro Bastoni (CB)", "Francesco Acerbi (CB)", "Federico Dimarco (LB)", "Denzel Dumfries (RB)", "Yann Sommer (GK)"],
-            ["Marko Arnautović (ST)", "Joaquín Correa (ST)", "Davide Frattesi (CM)", "Piotr Zieliński (CM)", "Benjamin Pavard (CB)", "Stefan de Vrij (CB)", "Josep Martínez (GK)"]
-        )},
-        { team: "AC Milan (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Álvaro Morata (ST)", "Tammy Abraham (ST)", "Rafael Leão (LW)", "Christian Pulisic (RW)", "Ruben Loftus-Cheek (CAM)", "Tijjani Reijnders (CM)", "Youssouf Fofana (CDM)", "Fikayo Tomori (CB)", "Strahinja Pavlović (CB)", "Theo Hernández (LB)", "Mike Maignan (GK)"],
-            ["Luka Jović (ST)", "Noah Okafor (LW)", "Samuel Chukwueze (RW)", "Yunus Musah (CM)", "Ismaël Bennacer (CDM)", "Malick Thiaw (CB)", "Marco Sportiello (GK)"]
-        )},
-        { team: "Napoli (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Romelu Lukaku (ST)", "Giovanni Simeone (ST)", "Khvicha Kvaratskhelia (LW)", "Matteo Politano (RW)", "Scott McTominay (CM)", "Stanislav Lobotka (CDM)", "André-Frank Zambo Anguissa (CM)", "Alessandro Buongiorno (CB)", "Amir Rrahmani (CB)", "Mathías Olivera (LB)", "Alex Meret (GK)"],
-            ["Giacomo Raspadori (ST)", "David Neres (RW)", "Pasquale Mazzocchi (RB)", "Juan Jesus (CB)", "Rafael Marín (CB)", "Michael Folorunsho (CM)", "Elia Caprile (GK)"]
-        )},
-        { team: "Juventus (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Dusan Vlahovic (ST)", "Arkadiusz Milik (ST)", "Kenan Yıldız (LW)", "Francisco Conceição (RW)", "Teun Koopmeiners (CAM)", "Manuel Locatelli (CDM)", "Weston McKennie (CM)", "Bremer (CB)", "Federico Gatti (CB)", "Andrea Cambiaso (LB)", "Michele Di Gregorio (GK)"],
-            ["Timothy Weah (RW)", "Douglas Luiz (CM)", "Nicolò Fagioli (CM)", "Khéphren Thuram (CM)", "Pierre Kalulu (CB)", "Danilo (CB)", "Mattia Perin (GK)"]
-        )},
-        { team: "Como (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Patrick Cutrone (ST)", "Andrea Belotti (ST)", "Nico Paz (CAM)", "Gabriel Strefezza (RW)", "Alieu Fadera (LW)", "Maximo Perrone (CDM)", "Sergi Roberto (CM)", "Alberto Dossena (CB)", "Edoardo Goldaniga (CB)", "Alberto Moreno (LB)", "Emil Audero (GK)"],
-            ["Alberto Cerri (ST)", "Lucas Da Cunha (RW)", "Mërgim Vojvoda (RB)", "Federico Barba (CB)", "Marc Oliver Kempf (CB)", "Ben Lhassine Kone (CM)", "Pepe Reina (GK)"]
-        )},
-        { team: "Atalanta (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Mateo Retegui (ST)", "Gianluca Scamacca (ST)", "Ademola Lookman (LW)", "Charles De Ketelaere (CF)", "Mario Pašalić (CAM)", "Marten de Roon (CDM)", "Ederson (CM)", "Berat Djimsiti (CB)", "Isak Hien (CB)", "Matteo Ruggeri (LB)", "Marco Carnesecchi (GK)"],
-            ["Nicolò Zaniolo (RW)", "Juan Cuadrado (RW)", "Marco Brescianini (CM)", "Raoul Bellanova (RB)", "Sead Kolašinac (CB)", "Rafael Tolói (CB)", "Rui Patrício (GK)"]
-        )},
-        { team: "Roma (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Artem Dovbyk (ST)", "Eldor Shomurodov (ST)", "Paulo Dybala (CAM)", "Matias Soulé (RW)", "Stephan El Shaarawy (LW)", "Lorenzo Pellegrini (CM)", "Bryan Cristante (CDM)", "Gianluca Mancini (CB)", "Evan Ndicka (CB)", "Angeliño (LB)", "Mile Svilar (GK)"],
-            ["Tommaso Baldanzi (CAM)", "Niccolò Pisilli (CM)", "Leandro Paredes (CDM)", "Mats Hummels (CB)", "Mario Hermoso (CB)", "Zeki Çelik (RB)", "Mathew Ryan (GK)"]
-        )},
-        { team: "Lazio (Current)", type: "current", league: "Serie A", players: generateFullRoster(
-            ["Valentín Castellanos (ST)", "Boulaye Dia (ST)", "Mattia Zaccagni (LW)", "Gustav Isaksen (RW)", "Fisayo Dele-Bashiru (CAM)", "Matteo Guendouzi (CM)", "Nicolò Rovella (CDM)", "Mario Gila (CB)", "Alessio Romagnoli (CB)", "Nuno Tavares (LB)", "Ivan Provedel (GK)"],
-            ["Pedro (RW)", "Tijjani Noslin (LW)", "Matias Vecino (CM)", "Loum Tchaouna (RW)", "Patric (CB)", "Manuel Lazzari (RB)", "Christos Mandas (GK)"]
-        )},
-        { team: "PSG (Current)", type: "current", league: "Ligue 1", players: generateFullRoster(
-            ["Gonçalo Ramos (ST)", "Randal Kolo Muani (ST)", "Bradley Barcola (LW)", "Ousmane Dembélé (RW)", "Marco Asensio (CAM)", "Vitinha (CM)", "João Neves (CM)", "Marquinhos (CB)", "Willian Pacho (CB)", "Nuno Mendes (LB)", "Gianluigi Donnarumma (GK)"],
-            ["Désiré Doué (LW)", "Lee Kang-in (CAM)", "Fabian Ruiz (CM)", "Warren Zaïre-Emery (CM)", "Lucas Beraldo (CB)", "Achraf Hakimi (RB)", "Matvey Safonov (GK)"]
-        )},
-        { team: "Lens (Current)", type: "current", league: "Ligue 1", players: generateFullRoster(
-            ["Florian Sotoca (ST)", "M'Bala Nzola (ST)", "Anass Zaroury (LW)", "Przemyslaw Frankowski (RW)", "Adrien Thomasson (CAM)", "Andy Diouf (CM)", "Neil El Aynaoui (CDM)", "Kevin Danso (CB)", "Abdukodir Khusanov (CB)", "Deiver Machado (LB)", "Brice Samba (GK)"],
-            ["Wesley Saïd (ST)", "David Pereira da Costa (CAM)", "Nampalys Mendy (CDM)", "Ruben Aguilar (RB)", "Jonathan Gradit (CB)", "Facundo Medina (CB)", "Hervé Koffi (GK)"]
-        )},
-        { team: "Marseille (Current)", type: "current", league: "Ligue 1", players: generateFullRoster(
-            ["Elye Wahi (ST)", "Neal Maupay (ST)", "Mason Greenwood (RW)", "Luis Henrique (LW)", "Amine Harit (CAM)", "Pierre-Emile Højbjerg (CM)", "Adrien Rabiot (CDM)", "Leonardo Balerdi (CB)", "Derek Cornelius (CB)", "Ulisses Garcia (LB)", "Gerónimo Rulli (GK)"],
-            ["Jonathan Rowe (LW)", "Valentin Carboni (CAM)", "Geoffrey Kondogbia (CDM)", "Michael Murillo (RB)", "Chancel Mbemba (CB)", "Bamo Meïté (CB)", "Jeffrey de Lange (GK)"]
-        )},
-        { team: "Lyon (Current)", type: "current", league: "Ligue 1", players: generateFullRoster(
-            ["Alexandre Lacazette (ST)", "Georges Mikautadze (ST)", "Wilfried Zaha (LW)", "Ernest Nuamah (RW)", "Rayan Cherki (CAM)", "Nemanja Matić (CDM)", "Jordan Veretout (CM)", "Moussa Niakhaté (CB)", "Duje Ćaleta-Car (CB)", "Nicolás Tagliafico (LB)", "Lucas Perri (GK)"],
-            ["Gift Orban (ST)", "Malick Fofana (LW)", "Corentin Tolisso (CM)", "Maxence Caqueret (CM)", "Clinton Mata (RB)", "Abner Vinícius (LB)", "Rémy Riou (GK)"]
         )}
     ];
 
-    let gameState = {
-        position: "",
-        round: 0,
-        maxRounds: 16,
-        currentTeam: null,
-        playerBuild: {},
-        availableTeams: [],
-        respinsLeft: 3
-    };
-
     function selectPosition(pos) {
-        gameState.position = pos;
+        selectedPosition = pos;
         document.querySelectorAll('#step-position .option-card').forEach(c => c.classList.remove('selected'));
-        event.target.classList.add('selected');
+        event.currentTarget.classList.add('selected');
         document.getElementById('start-draft-btn').classList.remove('hidden');
     }
 
     function startDraft() {
         document.getElementById('step-position').classList.add('hidden');
         document.getElementById('step-draft').classList.remove('hidden');
-        initAttributeProgress();
-        showBufferScreen();
+        renderAttributeList();
+        renderOpenRoster();
     }
 
-    function initAttributeProgress() {
-        const list = document.getElementById('attribute-progress-list');
-        list.innerHTML = "";
+    function renderAttributeList() {
+        const container = document.getElementById('attribute-progress-list');
+        container.innerHTML = '';
         attributesList.forEach(attr => {
-            list.innerHTML += `
-                <div class="attribute-item" id="attr-slot-${attr}">
-                    <span>${attr}</span>
-                    <span class="grade-badge" id="val-${attr}">Locked</span>
-                </div>
-            `;
-        });
-    }
-
-    function showBufferScreen() {
-        document.getElementById('buffer-screen').classList.remove('hidden');
-        document.getElementById('active-spin-box').classList.add('hidden');
-        document.getElementById('roster-container').classList.add('hidden');
-        document.getElementById('respins-left-text').innerText = `Respins Remaining: ${gameState.respinsLeft}/3`;
-    }
-
-    function triggerTeamSpin() {
-        document.getElementById('buffer-screen').classList.add('hidden');
-        document.getElementById('active-spin-box').classList.remove('hidden');
-        
-        let teamBox = document.getElementById('current-spun-team');
-        teamBox.classList.add('spinning-text');
-        
-        // Spinning animation simulation
-        let counter = 0;
-        let spinInterval = setInterval(() => {
-            let randomTemp = teamsDatabase[Math.floor(Math.random() * teamsDatabase.length)];
-            teamBox.innerText = randomTemp.team;
-            counter++;
-            if(counter > 8) {
-                clearInterval(spinInterval);
-                teamBox.classList.remove('spinning-text');
-                finalizeTeamSpin();
+            const val = playerAttributes[attr];
+            const isLocked = val !== null;
+            const div = document.createElement('div');
+            div.className = `attribute-item ${isLocked ? 'locked' : ''}`;
+            div.innerHTML = `<span>${attr}</span> <strong>${isLocked ? val : 'Unassigned'}</strong>`;
+            if (!isLocked) {
+                div.onclick = () => setTargetAttribute(attr);
             }
-        }, 80);
-    }
-
-    function finalizeTeamSpin() {
-        const randomIndex = Math.floor(Math.random() * teamsDatabase.length);
-        gameState.currentTeam = teamsDatabase[randomIndex];
-        
-        if (gameState.currentTeam.type === 'current' && !gameState.availableTeams.includes(gameState.currentTeam.team)) {
-            gameState.availableTeams.push(gameState.currentTeam.team);
-        }
-
-        const isClassic = gameState.currentTeam.type === 'classic';
-        const badgeHTML = isClassic ? 
-            `<span class="team-banner classic-badge">⭐ SPECIAL CLASSIC PULL</span>` : 
-            `<span class="team-banner current-badge">⚡ CURRENT SQUAD</span>`;
-        
-        document.getElementById('team-type-tag').innerHTML = badgeHTML;
-        document.getElementById('current-spun-team').innerText = gameState.currentTeam.team;
-        
-        // Update respin button constraints
-        const respinBtn = document.getElementById('respin-btn');
-        document.getElementById('respin-count-badge').innerText = gameState.respinsLeft;
-        if (gameState.respinsLeft <= 0) {
-            respinBtn.disabled = true;
-            respinBtn.style.opacity = 0.5;
-            respinBtn.style.cursor = 'not-allowed';
-        } else {
-            respinBtn.disabled = false;
-            respinBtn.style.opacity = 1;
-            respinBtn.style.cursor = 'pointer';
-        }
-
-        renderRosterList();
-    }
-
-    function respinTeam() {
-        if (gameState.respinsLeft > 0) {
-            gameState.respinsLeft--;
-            triggerTeamSpin();
-        }
-    }
-
-    function renderRosterList() {
-        const rosterDiv = document.getElementById('roster-container');
-        rosterDiv.classList.remove('hidden');
-        rosterDiv.innerHTML = "<h4>Select a player from this squad to pick an attribute:</h4>";
-
-        gameState.currentTeam.players.forEach(player => {
-            let usedClass = player.used ? 'used' : '';
-            let clickAction = player.used ? '' : `onclick='selectPlayerFromTeam(${JSON.stringify(player)})'`;
-            let statusText = player.used ? ' (Already Selected)' : '➔ Pick Stats';
-
-            rosterDiv.innerHTML += `
-                <div class="player-card-option ${usedClass}" ${clickAction}>
-                    <span><strong>${player.name}</strong></span>
-                    <span style="color:var(--accent-gold); font-size:0.85rem; font-weight:700;">${statusText}</span>
-                </div>
-            `;
+            container.appendChild(div);
         });
     }
 
-    function selectPlayerFromTeam(player) {
-        if (player.used) return;
+    function setTargetAttribute(attr) {
+        selectedAttributeTarget = attr;
+        document.getElementById('target-stat-name').innerText = attr;
+        document.getElementById('active-selection-prompt').classList.remove('hidden');
+        document.getElementById('roster-container').classList.remove('hidden');
+    }
 
-        // Mark player as used globally so they cannot be picked again from any team
-        player.used = true;
+    function renderOpenRoster() {
+        const container = document.getElementById('roster-container');
+        container.innerHTML = '';
+        
+        teamsDatabase.forEach(tData => {
+            let header = document.createElement('div');
+            header.style.gridColumn = "1 / -1";
+            header.style.color = "var(--accent-gold)";
+            header.style.fontWeight = "700";
+            header.style.marginTop = "10px";
+            header.innerText = tData.team;
+            container.appendChild(header);
 
-        const unassignedAttrs = attributesList.filter(attr => !gameState.playerBuild[attr]);
-        if (unassignedAttrs.length === 0) {
-            finalizeBuild();
+            tData.players.forEach((p, pIdx) => {
+                let card = document.createElement('div');
+                card.className = `player-card-option ${p.used ? 'used' : ''}`;
+                card.innerHTML = `<span>${p.name}</span>`;
+                if (!p.used) {
+                    card.onclick = () => pickPlayerForTarget(tData, pIdx);
+                }
+                container.appendChild(card);
+            });
+        });
+    }
+
+    function pickPlayerForTarget(tData, pIdx) {
+        if (!selectedAttributeTarget) {
+            alert("Please click an unassigned attribute from your list first!");
             return;
         }
-
-        const shuffled = unassignedAttrs.sort(() => 0.5 - Math.random());
-        const choices = shuffled.slice(0, 3);
-
-        let choiceHtml = `<h4>Choose 1 attribute from ${player.name}:</h4><div class="grid-options">`;
-        choices.forEach(attr => {
-            const rawVal = player.ratings[attr] || 80;
-            const grade = getLetterGrade(rawVal);
-            choiceHtml += `<div class="option-card" onclick="lockAttribute('${attr}', ${rawVal})"><strong>${attr}</strong><br><span class="grade-badge ${getGradeClass(grade)}" style="margin-top:6px; display:inline-block;">${grade} (${rawVal})</span></div>`;
-        });
-        choiceHtml += `</div>`;
-
-        document.getElementById('roster-container').innerHTML = choiceHtml;
-    }
-
-    function lockAttribute(attr, val) {
-        gameState.playerBuild[attr] = val;
-        gameState.round++;
+        let player = tData.players[pIdx];
+        let statValue = player.ratings[selectedAttributeTarget];
         
-        document.getElementById(`val-${attr}`).innerText = `${getLetterGrade(val)} (${val})`;
-        document.getElementById(`val-${attr}`).className = `grade-badge ${getGradeClass(getLetterGrade(val))}`;
-        document.getElementById(`attr-slot-${attr}`).classList.add('locked');
+        playerAttributes[selectedAttributeTarget] = statValue;
+        player.used = true;
+        lockedCount++;
+        
+        document.getElementById('draft-round').innerText = lockedCount;
+        selectedAttributeTarget = null;
+        document.getElementById('active-selection-prompt').classList.add('hidden');
+        
+        renderAttributeList();
+        renderOpenRoster();
 
-        document.getElementById('draft-round').innerText = gameState.round + 1;
-
-        if (gameState.round >= gameState.maxRounds || Object.keys(gameState.playerBuild).length >= attributesList.length) {
-            finalizeBuild();
-        } else {
-            showBufferScreen();
+        if (lockedCount >= attributesList.length) {
+            finalizeDraft();
         }
     }
 
-    function getLetterGrade(score) {
-        if (score >= 98) return 'S';
-        if (score >= 93) return 'A+';
-        if (score >= 88) return 'A';
-        if (score >= 83) return 'B+';
-        if (score >= 78) return 'B';
-        if (score >= 70) return 'C+';
-        return 'F';
-    }
-
-    function getGradeClass(grade) {
-        if (grade === 'S') return 'grade-S';
-        if (grade.startsWith('A')) return 'grade-A';
-        if (grade.startsWith('B')) return 'grade-B';
-        return 'grade-D';
-    }
-
-    function finalizeBuild() {
+    function finalizeDraft() {
         document.getElementById('step-draft').classList.add('hidden');
         document.getElementById('step-reveal').classList.remove('hidden');
-
-        document.getElementById('reveal-position').innerText = `Position: ${gameState.position}`;
+        document.getElementById('reveal-position').innerText = selectedPosition;
         
-        let total = 0, count = 0;
-        for (let k in gameState.playerBuild) {
-            total += gameState.playerBuild[k];
-            count++;
-        }
-        let avg = count > 0 ? Math.round(total / count) : 80;
-        let overallGrade = getLetterGrade(avg);
+        let sum = 0;
+        attributesList.forEach(attr => sum += playerAttributes[attr]);
+        let avg = Math.round(sum / attributesList.length);
+        
+        document.getElementById('reveal-archetype').innerText = avg > 88 ? "Iconic World-Beater" : "Elite Starter";
+        let gradeBadge = document.getElementById('reveal-grade');
+        gradeBadge.innerText = avg;
+        gradeBadge.className = "grade-badge " + (avg >= 90 ? "grade-S" : avg >= 85 ? "grade-A" : "grade-B");
 
-        document.getElementById('reveal-grade').innerText = `${overallGrade} (${avg} OVR)`;
-        document.getElementById('reveal-grade').className = `grade-badge ${getGradeClass(overallGrade)}`;
-
-        let archetype = "Box-to-Box Midfielder";
-        if (gameState.position === "Striker") archetype = avg > 90 ? "Elite Poacher & Target Man" : "Advanced Forward";
-        if (gameState.position === "Winger") archetype = avg > 90 ? "Inverted Winger & Playmaker" : "Touchline Flier";
-        if (gameState.position === "Centerback") archetype = avg > 90 ? "Ball-Playing Stopper" : "Rock-Solid Defender";
-        if (gameState.position === "Fullback") archetype = avg > 90 ? "Modern Overlapping Wingback" : "Reliable Fullback";
-        document.getElementById('reveal-archetype').innerText = archetype;
-
-        const finalAttrList = document.getElementById('final-attribute-list');
-        finalAttrList.innerHTML = "";
-        for (let attr of attributesList) {
-            let val = gameState.playerBuild[attr] || 80;
-            let grade = getLetterGrade(val);
-            finalAttrList.innerHTML += `
-                <div class="attribute-item locked">
-                    <span>${attr}</span>
-                    <span class="grade-badge ${getGradeClass(grade)}">${grade}</span>
-                </div>
-            `;
-        }
+        const finalAttrs = document.getElementById('final-attribute-list');
+        finalAttrs.innerHTML = '';
+        attributesList.forEach(attr => {
+            finalAttrs.innerHTML += `<div class="attribute-item locked"><span>${attr}</span> <strong>${playerAttributes[attr]}</strong></div>`;
+        });
     }
 
     function startCareerSelection() {
         document.getElementById('step-reveal').classList.add('hidden');
         document.getElementById('step-career-team').classList.remove('hidden');
-
         const select = document.getElementById('career-team-select');
-        select.innerHTML = "";
-        
-        if (gameState.availableTeams.length === 0) {
-            gameState.availableTeams = ["Real Madrid (Current)", "Barcelona (Current)", "Man City (Current)", "Bayern Munich (Current)"];
-        }
-
-        gameState.availableTeams.forEach(t => {
-            select.innerHTML += `<option value="${t}">${t}</option>`;
+        select.innerHTML = '';
+        teamsDatabase.forEach(t => {
+            select.innerHTML += `<option value="${t.team}">${t.team}</option>`;
         });
     }
 
     function simulateSeason() {
-        const chosenTeam = document.getElementById('career-team-select').value;
         document.getElementById('step-career-team').classList.add('hidden');
         document.getElementById('step-sim').classList.remove('hidden');
-
-        let avgRating = Object.values(gameState.playerBuild).reduce((a,b) => a+b, 0) / attributesList.length;
-        let multiplier = avgRating / 85;
-
-        let goals = gameState.position === 'Striker' ? Math.floor(28 * multiplier + Math.random() * 8) : 
-                    gameState.position === 'Winger' ? Math.floor(20 * multiplier + Math.random() * 6) : 
-                    Math.floor(7 * multiplier + Math.random() * 4);
-
-        let assists = gameState.position === 'Winger' || gameState.position === 'Midfielder' ? Math.floor(16 * multiplier + Math.random() * 6) : Math.floor(4 * multiplier);
-        let cleanSheets = (gameState.position === 'Centerback' || gameState.position === 'Fullback') ? Math.floor(15 * multiplier + Math.random() * 4) : 0;
-        let motm = Math.floor(goals * 0.4 + assists * 0.3 + 6);
-
-        let wonBallonDor = avgRating >= 91 && Math.random() > 0.35;
-        let wonUCL = Math.random() > 0.45;
-        let teamWins = Math.floor(25 + Math.random() * 7);
-
-        let resultsHTML = `
-            <h3 style="color:var(--accent-gold); font-size:1.4rem; margin-bottom:5px;">Career Simulation: ${chosenTeam}</h3>
-            <p style="color:var(--text-muted); margin-top:0;"><strong>Position:</strong> ${gameState.position} | <strong>Rating:</strong> ${Math.round(avgRating)} OVR</p>
-            
+        
+        let goals = Math.floor(Math.random() * 35) + 10;
+        let assists = Math.floor(Math.random() * 25) + 5;
+        
+        document.getElementById('sim-results-content').innerHTML = `
             <table class="stats-table">
-                <tr><th>Simulation Metric</th><th>Performance Stat</th></tr>
+                <tr><th>Metric</th><th>Stat Line</th></tr>
                 <tr><td>Goals Scored</td><td><strong>${goals}</strong></td></tr>
-                <tr><td>Assists Delivered</td><td><strong>${assists}</strong></td></tr>
-                ${cleanSheets > 0 ? `<tr><td>Clean Sheets Kept</td><td><strong>${cleanSheets}</strong></td></tr>` : ''}
-                <tr><td>Chances Created</td><td><strong>${Math.floor(assists * 2.5 + 22)}</strong></td></tr>
-                <tr><td>Successful Dribbles</td><td><strong>${Math.floor(48 * multiplier)}</strong></td></tr>
-                <tr><td>Free Kicks Scored</td><td><strong>${Math.floor(Math.random() * 5)}</strong></td></tr>
-                <tr><td>Man of the Match Awards</td><td><strong>${motm}</strong></td></tr>
-                <tr><td>League Player of the Months</td><td><strong>${Math.floor(motm / 3)}</strong></td></tr>
-                <tr><td>Domestic League Wins</td><td><strong>${teamWins} Wins</strong></td></tr>
-            </table>
-
-            <h3 style="margin-top:25px; color:var(--accent-gold);">🏆 Trophies & Individual Honors</h3>
-            <ul style="line-height: 2; padding-left: 20px;">
-                <li><strong>Ballon d'Or:</strong> ${wonBallonDor ? '👑 Won the Ballon d\'Or!' : 'Kylian Mbappé / Jude Bellingham'}</li>
-                <li><strong>UCL Player of the Tournament:</strong> ${wonUCL ? '🌟 Won with ' + chosenTeam : 'Vinícius Júnior'}</li>
-                <li><strong>League Player of the Season:</strong> ${avgRating > 87 ? '🏆 Winner!' : 'Erling Haaland'}</li>
-            </ul>
-        `;
-
-        document.getElementById('sim-results-content').innerHTML = resultsHTML;
+                <tr><td>Assists Provided</td><td><strong>${assists}</strong></td></tr>
+                <tr><td>Average Match Rating</td><td><strong>8.42 / 10</strong></td></tr>
+                <tr><td>Trophies Won</td><td><span style="color:var(--accent-gold);">League Title & Domestic Cup</span></td></tr>
+            </table>`;
     }
 </script>
-
 </body>
 </html>
